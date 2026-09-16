@@ -1,0 +1,26 @@
+# ЧЕРНОВИК: пересечения тем между общим списком и курсом Скворчевского.
+# Составлен вручную по формулировкам вопросов, требует проверки владельцем.
+# Используется для: (1) подсказки «связанные билеты» в UI;
+# (2) переиспользования extracts при генерации ответов на общие вопросы.
+schema_version: 1
+status: draft
+pairs:
+  - {course: s01, general: [g01]}
+  - {course: s02, general: [g03, g04]}
+  - {course: s03, general: [g04]}
+  - {course: s04, general: [g06]}
+  - {course: s05, general: [g07]}
+  - {course: s06, general: [g08]}
+  - {course: s07, general: [g06]}
+  - {course: s09, general: [g01, g12]}
+  - {course: s10, general: [g11]}
+  - {course: s11, general: [g13]}
+  - {course: s12, general: [g14, g15]}
+  - {course: s13, general: [g16]}
+  - {course: s14, general: [g17]}
+  - {course: s15, general: [g18, g19]}
+  - {course: s16, general: [g14, g15]}
+  - {course: s17, general: [g16]}
+  - {course: s20, general: [g14, g15]}
+# Без явной пары в курсе (ожидается coverage=partial/not_found по лекциям):
+# g02, g05, g09, g10, g20, g21, g22, g23, g24, g25, g26

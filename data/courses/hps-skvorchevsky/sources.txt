@@ -1,0 +1,3 @@
+# Источники курса: ссылки на плейлист или отдельные видео, по одной на строку.
+# Строки, начинающиеся с #, игнорируются.
+https://www.youtube.com/playlist?list=PLthfp5exSWEombVl5WKFZNCOlf3yL1Ja6

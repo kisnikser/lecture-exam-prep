@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "slug": "hps-skvorchevsky",
+  "title": "История и философия науки (К. А. Скворчевский)",
+  "language": "ru",
+  "question_sets": [
+    "mipt-hps-general-2025-26",
+    "skvorchevsky-2025-26"
+  ],
+  "sources": [
+    {
+      "video_id": "DFcB8Yn-O9o",
+      "url": "https://youtu.be/DFcB8Yn-O9o",
+      "title": "History and Philosophy of Science, K. A. Skvorchevsky, 09/03/2022",
+      "duration_s": 5670.0,
+      "order": 1
+    },
+    {
+      "video_id": "CRiaQpGiMpo",
+      "url": "https://youtu.be/CRiaQpGiMpo",
+      "title": "История и философия науки, Скворчевский К. А., 08.10.2022г.",
+      "duration_s": 5158.0,
+      "order": 2
+    },
+    {
+      "video_id": "eCq6txl28Ms",
+      "url": "https://youtu.be/eCq6txl28Ms",
+      "title": "История и философия науки, Скворчевский К. А., 15.10.2022г.",
+      "duration_s": 4965.0,
+      "order": 3
+    },
+    {
+      "video_id": "uCRpMqlEDxo",
+      "url": "https://youtu.be/uCRpMqlEDxo",
+      "title": "История и философия науки, Скворчевский К. А., 22.10.2022г.",
+      "duration_s": 4936.0,
+      "order": 4
+    },
+    {
+      "video_id": "hhF0PXCRD2o",
+      "url": "https://youtu.be/hhF0PXCRD2o",
+      "title": "History and Philosophy of Science, Skvorchevsky K. A., 10.29.2022",
+      "duration_s": 4994.0,
+      "order": 5
+    },
+    {
+      "video_id": "PN1S5KJbBN0",
+      "url": "https://youtu.be/PN1S5KJbBN0",
+      "title": "Skvorchevsky K.A., History and Philosophy of Science, November 5, 2022",
+      "duration_s": 5058.0,
+      "order": 6
+    },
+    {
+      "video_id": "Q2G3tx1OmHI",
+      "url": "https://youtu.be/Q2G3tx1OmHI",
+      "title": "История и философия науки, Скворчевский К. А., 12.11.2022г.",
+      "duration_s": 5026.0,
+      "order": 7
+    },
+    {
+      "video_id": "NaO86WCawng",
+      "url": "https://youtu.be/NaO86WCawng",
+      "title": "History and Philosophy of Science, K. A. Skvorchevsky, 11/19/2022",
+      "duration_s": 4961.0,
+      "order": 8
+    },
+    {
+      "video_id": "5aWEO7Bvqcw",
+      "url": "https://youtu.be/5aWEO7Bvqcw",
+      "title": "История и философия науки, Скворчевский К. А., 03.12.2022г.",
+      "duration_s": 5132.0,
+      "order": 9
+    },
+    {
+      "video_id": "78crqvyqP_E",
+      "url": "https://youtu.be/78crqvyqP_E",
+      "title": "История и философия науки, Скворчевский К. А., 10.12.2022г.",
+      "duration_s": 4901.0,
+      "order": 10
+    },
+    {
+      "video_id": "nAC1Ntp-CeY",
+      "url": "https://youtu.be/nAC1Ntp-CeY",
+      "title": "K.A. Skvorchevsky, History and Philosophy of Science, 02/04/2023",
+      "duration_s": 5509.0,
+      "order": 11
+    },
+    {
+      "video_id": "gcz5_xcwaB4",
+      "url": "https://youtu.be/gcz5_xcwaB4",
+      "title": "Skvorchevsky K.A., History and Philosophy of Science, 02/11/2023",
+      "duration_s": 5319.0,
+      "order": 12
+    },
+    {
+      "video_id": "ljONiKqH3BU",
+      "url": "https://youtu.be/ljONiKqH3BU",
+      "title": "Скворчевский К.А., История и философия науки, 25.02.2023",
+      "duration_s": 5567.0,
+      "order": 13
+    },
+    {
+      "video_id": "-SSdI8Rsj64",
+      "url": "https://youtu.be/-SSdI8Rsj64",
+      "title": "Skvorchevsky K.A., History and Philosophy of Science, 04.03.2023",
+      "duration_s": 5149.0,
+      "order": 14
+    },
+    {
+      "video_id": "6L4rEs5qJhw",
+      "url": "https://youtu.be/6L4rEs5qJhw",
+      "title": "Скворчевский К.А., История и философия науки, 11.03.2023",
+      "duration_s": 5412.0,
+      "order": 15
+    },
+    {
+      "video_id": "7coS1TnmCC8",
+      "url": "https://youtu.be/7coS1TnmCC8",
+      "title": "K.A. Skvorchevsky, History and Philosophy of Science, 03/18/2023",
+      "duration_s": 5020.0,
+      "order": 16
+    },
+    {
+      "video_id": "s8tkvEDFFP8",
+      "url": "https://youtu.be/s8tkvEDFFP8",
+      "title": "K.A. Skvorchevsky, History and Philosophy of Science, 03/25/2023",
+      "duration_s": 5068.0,
+      "order": 17
+    },
+    {
+      "video_id": "KHZ9qZ9dvVM",
+      "url": "https://youtu.be/KHZ9qZ9dvVM",
+      "title": "K.A. Skvorchevsky, History and Philosophy of Science, 04/01/2023",
+      "duration_s": 5133.0,
+      "order": 18
+    },
+    {
+      "video_id": "kNIbhuesh2g",
+      "url": "https://youtu.be/kNIbhuesh2g",
+      "title": "K.A. Skvorchevsky, History and Philosophy of Science, 04/08/2023",
+      "duration_s": 5355.0,
+      "order": 19
+    },
+    {
+      "video_id": "WJ88oE057u8",
+      "url": "https://youtu.be/WJ88oE057u8",
+      "title": "Скворчевский К.А., История и философия науки, 15.04.2023",
+      "duration_s": 5227.0,
+      "order": 20
+    },
+    {
+      "video_id": "V-hf6ATVBcg",
+      "url": "https://youtu.be/V-hf6ATVBcg",
+      "title": "Skvorchevsky K.A., History and Philosophy of Science, 04/22/2023",
+      "duration_s": 4674.0,
+      "order": 21
+    }
+  ]
+}
