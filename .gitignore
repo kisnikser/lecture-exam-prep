@@ -14,8 +14,10 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Привязаны к корню: иначе прячут site/src/lib/ — это код фронтенда,
+# а не виртуальное окружение.
+/lib/
+/lib64/
 parts/
 sdist/
 var/
