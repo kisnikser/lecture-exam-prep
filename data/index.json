@@ -12,16 +12,118 @@
       "videos": 21,
       "answers": [
         {
+          "question_id": "g01",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 13
+        },
+        {
           "question_id": "g02",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 8
+        },
+        {
+          "question_id": "g03",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 7
+        },
+        {
+          "question_id": "g04",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 22
+        },
+        {
+          "question_id": "g05",
           "question_set": "mipt-hps-general-2025-26",
           "coverage": "partial",
           "citations": 9
         },
         {
+          "question_id": "g06",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 13
+        },
+        {
+          "question_id": "g07",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 9
+        },
+        {
+          "question_id": "g08",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 18
+        },
+        {
+          "question_id": "g09",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 0
+        },
+        {
+          "question_id": "g10",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 1
+        },
+        {
+          "question_id": "g11",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 13
+        },
+        {
+          "question_id": "g12",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 15
+        },
+        {
+          "question_id": "g13",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 3
+        },
+        {
+          "question_id": "g14",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 21
+        },
+        {
+          "question_id": "g15",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 10
+        },
+        {
           "question_id": "g16",
           "question_set": "mipt-hps-general-2025-26",
           "coverage": "partial",
-          "citations": 6
+          "citations": 5
+        },
+        {
+          "question_id": "g17",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 3
+        },
+        {
+          "question_id": "g18",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "not_found",
+          "citations": 0
+        },
+        {
+          "question_id": "g19",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "not_found",
+          "citations": 0
         },
         {
           "question_id": "s12",
@@ -416,5 +518,5 @@
       ]
     }
   ],
-  "generated_at": "2026-09-16T15:06:51.586347Z"
+  "generated_at": "2026-09-16T15:36:15.963080Z"
 }
