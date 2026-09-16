@@ -43,6 +43,9 @@ function examprepData(): Plugin {
           'Content-Type',
           CONTENT_TYPES[path.extname(file)] ?? 'application/octet-stream',
         )
+        // Пайплайн дописывает ответы прямо во время работы, и закэшированный
+        // index.json показывает вчерашний список как сегодняшний.
+        res.setHeader('Cache-Control', 'no-store')
         createReadStream(file).pipe(res)
       })
     },

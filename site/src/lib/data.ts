@@ -5,7 +5,9 @@ const BASE = import.meta.env.BASE_URL
 let indexPromise: Promise<DataIndex> | null = null
 
 async function fetchJson<T>(relativePath: string): Promise<T> {
-  const response = await fetch(`${BASE}data/${relativePath}`)
+  // Данные обновляются чаще, чем сборка сайта, и имена файлов не меняются:
+  // без ревалидации браузер показывает старый список билетов как текущий.
+  const response = await fetch(`${BASE}data/${relativePath}`, { cache: 'no-cache' })
   if (!response.ok) {
     throw new Error(`${relativePath}: ${response.status}`)
   }
