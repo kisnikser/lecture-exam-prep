@@ -244,6 +244,11 @@ questions:
 ## LLM
 
 - Единый клиент `llm.py` поверх OpenAI-compatible API.
+- **Ничего ставить и качать не нужно.** На кластере уже есть и веса, и vLLM:
+  веса — `/home/jovyan/shares/SR008.fs2/me/models/Qwen3.8-Flash-Next-FP8` (178 ГБ),
+  окружение — `/home/jovyan/degainanov/envs/vllm029-cu129` (vLLM 0.29.0, torch 2.13.0+cu129).
+  Оба чужие и подключаются только на чтение, как и conda-окружение для ASR.
+  Пути задаются через `LLM_MODEL` и `VLLM_ENV`, поднимает всё `scripts/serve_llm.sh`.
 - **По умолчанию:** vLLM на GPU-сервере, `LLM_BASE_URL=http://localhost:8000/v1`. Модель задаётся в `LLM_MODEL`. Стартовый кандидат — `Qwen/Qwen3.8-Flash-Next-FP8` (125B всего / 6B активных + 51B n-gram embedding + 4B MTP, ~180 ГБ в FP8, контекст 262k) с `--tensor-parallel-size 8`.
 - **Thinking-режим.** Qwen3.8-Flash-Next по умолчанию генерирует `<think>…</think>` перед ответом. Для extract его надо выключать (параметр шаблона чата / `chat_template_kwargs`), иначе 1880 вызовов утонут в рассуждениях; для synthesize можно оставить включённым и сравнить на eval. `llm.py` обязан отрезать блок `<think>` до парсинга JSON, даже когда режим выключен.
 - **Альтернатива:** Anthropic API (`LLM_PROVIDER=anthropic`, `LLM_API_KEY`) — если open-weight качество не устроит на eval. Запасной open-weight вариант — `Qwen/Qwen3-235B-A22B-Instruct-2507-FP8` (~235 ГБ, не thinking).
@@ -345,7 +350,7 @@ cd site && pnpm lint && pnpm typecheck && pnpm test
 - Python 3.12, uv, ruff, mypy (strict для `schemas.py`), pytest. Сеть, GPU и LLM в тестах — только моки.
 - TypeScript strict, ESLint, Vitest; типы данных только сгенерированные.
 - Логи через `rich`/`structlog`, прогресс через `rich.progress`.
-- Конфиг через `.env` в корне репозитория (`.env.example` рядом), один на pipeline и скрипты: `GPU_HOST`, `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_CONCURRENCY`, `EMBED_MODEL`, `RETRIEVE_TOP_K`, `CHUNK_SECONDS`, `CHUNK_OVERLAP_SECONDS`, `WHISPER_MODEL`, `TRANSCRIBE_GPUS`, `GPU_REPO_PATH`, `VLLM_PORT`, `VLLM_TP_SIZE`, `VLLM_GPU_MEM_UTIL`, `SITE_BASE`.
+- Конфиг через `.env` в корне репозитория (`.env.example` рядом), один на pipeline и скрипты: `GPU_HOST`, `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_CONCURRENCY`, `EMBED_MODEL`, `RETRIEVE_TOP_K`, `CHUNK_SECONDS`, `CHUNK_OVERLAP_SECONDS`, `WHISPER_MODEL`, `TRANSCRIBE_GPUS`, `GPU_REPO_PATH`, `VLLM_ENV`, `VLLM_PORT`, `VLLM_TP_SIZE`, `VLLM_GPU_MEM_UTIL`, `SITE_BASE`.
 - Conventional Commits; данные — отдельными коммитами `data(<slug>): …`.
 - Перед завершением задачи — линтеры и тесты затронутой части.
 
