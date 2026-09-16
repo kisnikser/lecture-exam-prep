@@ -90,7 +90,7 @@ def transcribe_course(
     force: bool = False,
     limit: int | None = None,
     video_id: str | None = None,
-    timestamps: str = "word",
+    timestamps: str = "sequential",
     per_gpu: int = 1,
     glossary_prompt: bool = False,
 ) -> list[str]:

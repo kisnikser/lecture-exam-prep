@@ -282,7 +282,7 @@ def transcribe_one(
     video_id: str,
     model_size: str | None = None,
     device: str | None = None,
-    timestamps: str = "word",
+    timestamps: str = "sequential",
     glossary_prompt: bool = False,
 ) -> Transcript:
     settings = get_settings()

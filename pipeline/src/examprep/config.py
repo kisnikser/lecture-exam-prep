@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     llm_model: str = "Qwen/Qwen3.8-Flash-Next-FP8"
     llm_api_key: str = "dummy"
     llm_concurrency: int = 64
+    llm_thinking: bool = False
+    llm_temperature_extract: float = 0.0
+    llm_temperature_synthesize: float = 0.3
 
     embed_model: str = "BAAI/bge-m3"
     retrieve_top_k: int = 40

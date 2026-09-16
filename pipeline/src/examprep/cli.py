@@ -90,7 +90,7 @@ def transcribe(
     force: bool = ForceOption,
     limit: int | None = typer.Option(None, "--limit", help="Обработать только первые N видео"),
     video: str | None = typer.Option(None, "--video", help="Только это видео, по его id"),
-    timestamps: str = typer.Option("word", "--timestamps", help="word | sequential | chunk"),
+    timestamps: str = typer.Option("sequential", "--timestamps", help="sequential | word | chunk"),
     per_gpu: int = typer.Option(1, "--per-gpu", help="Сколько лекций считать на одной карте"),
     glossary_prompt: bool = typer.Option(
         False,
@@ -174,10 +174,35 @@ def retrieve(
 
 
 @app.command()
-def answer(course: str = CourseOption) -> None:
+def answer(
+    course: str = CourseOption,
+    question: str | None = typer.Option(None, "--question", "-q", help="Только этот билет"),
+    question_set: str | None = typer.Option(None, "--set", help="Только этот набор вопросов"),
+    force: bool = ForceOption,
+    top_k: int | None = typer.Option(None, "--top-k", help="Сколько кандидатов брать поиском"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Показать план, ничего не считая"),
+) -> None:
     """Сгенерировать ответы на билеты."""
 
-    _todo("answer", "5")
+    from examprep.answer import run as run_answers
+
+    answers = run_answers(
+        course,
+        set_id=question_set,
+        question_id=question,
+        force=force,
+        top_k=top_k,
+        dry_run=dry_run,
+    )
+    if dry_run:
+        return
+
+    console.print(f"[green]✓[/green] ответов сгенерировано: {len(answers)}")
+    for item in answers:
+        console.print(
+            f"  {item.question_id}: coverage [bold]{item.coverage}[/bold], "
+            f"цитат {len(item.citations)}"
+        )
 
 
 @app.command()
