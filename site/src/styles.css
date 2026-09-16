@@ -33,13 +33,11 @@
   --measure: 66ch;
   --radius: 6px;
 
-  /* Только системные гарнитуры: ничего не грузится по сети, нет скачка
-     вёрстки при подмене шрифта и нет запроса к стороннему домену.
-     Засечки оставлены для текста ответа — длинный текст с них читается
-     легче, а контраст с интерфейсным гротеском сам показывает, где
-     документ, а где навигация. */
+  /* Одна системная гарнитура на весь сайт: ничего не грузится по сети,
+     нет скачка вёрстки при подмене шрифта и нет запроса к стороннему
+     домену. Текст ответа отделяется от интерфейса кеглем и интерлиньяжем,
+     а не сменой гарнитуры. */
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --serif: Georgia, 'Times New Roman', 'Droid Serif', serif;
 
   color-scheme: light;
 }
@@ -301,20 +299,14 @@ a {
   color: var(--accent);
 }
 
-/* Ответ читают, а не просматривают: засечки и увеличенный кегль. */
+/* Ответ читают целиком, а не просматривают: крупнее и просторнее интерфейса. */
 .answer {
-  font-family: var(--serif);
   font-size: 1.05rem;
-  line-height: 1.7;
+  line-height: 1.75;
 }
 
-.answer h2,
 .answer h3 {
-  font-family: var(--sans);
   letter-spacing: -0.01em;
-}
-
-.answer h3 {
   font-size: 1rem;
   margin: 2rem 0 0.5rem;
 }
@@ -329,7 +321,6 @@ a {
 }
 
 .answer a {
-  font-family: var(--sans);
   font-size: 0.85em;
   font-weight: 600;
   text-decoration: none;
@@ -412,7 +403,6 @@ a {
 
 .citations q {
   color: var(--ink-soft);
-  font-family: var(--serif);
   quotes: '«' '»';
 }
 
