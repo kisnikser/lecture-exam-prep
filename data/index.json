@@ -10,7 +10,38 @@
         "skvorchevsky-2025-26"
       ],
       "videos": 21,
-      "answers": []
+      "answers": [
+        {
+          "question_id": "g02",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 9
+        },
+        {
+          "question_id": "g16",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 6
+        },
+        {
+          "question_id": "s12",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 21
+        },
+        {
+          "question_id": "s13",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "partial",
+          "citations": 6
+        },
+        {
+          "question_id": "s18",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "not_found",
+          "citations": 0
+        }
+      ]
     }
   ],
   "question_sets": [
@@ -385,5 +416,5 @@
       ]
     }
   ],
-  "generated_at": "2026-09-16T14:06:20.913434Z"
+  "generated_at": "2026-09-16T15:06:51.586347Z"
 }

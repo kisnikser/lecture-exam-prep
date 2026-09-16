@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "question_id": "s18",
+  "candidates": 40,
+  "relevant": [],
+  "readings": [],
+  "model": "/home/jovyan/shares/SR008.fs2/me/models/Qwen3.8-Flash-Next-FP8",
+  "prompt_version": "extract_v1",
+  "input_hash": "b3abb753e06a845694e1a3dd37b499297f94c860ed090133fa51eb2d6e097034"
+}

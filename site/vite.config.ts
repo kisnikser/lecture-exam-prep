@@ -14,6 +14,19 @@ const CONTENT_TYPES: Record<string, string> = {
   '.txt': 'text/plain; charset=utf-8',
 }
 
+/**
+ * Kept out of a published build.
+ *
+ * Audio and embeddings are simply too large. The transcripts and the chunks
+ * cut from them are the lectures themselves, and a public site is a far more
+ * visible place for someone else's course than a repository; the answers carry
+ * their own quotes and link back to the original video, so nothing on the site
+ * needs them, and neither does anything else on the site: extracts are debugging
+ * artefacts of the extraction step. They stay available in dev, where a
+ * transcript search can use them locally.
+ */
+const PRIVATE_TO_DEV = ['/audio', '/transcripts', '/extracts', 'chunks.jsonl', '.npy']
+
 /** Serves `data/` at `/data/` in dev and copies it into the build output. */
 function examprepData(): Plugin {
   return {
@@ -36,7 +49,7 @@ function examprepData(): Plugin {
     async closeBundle() {
       await cp(DATA_DIR, path.resolve('dist/data'), {
         recursive: true,
-        filter: (source) => !source.includes('/audio') && !source.endsWith('.npy'),
+        filter: (source) => !PRIVATE_TO_DEV.some((part) => source.includes(part)),
       })
     },
   }
