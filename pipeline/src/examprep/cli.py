@@ -68,6 +68,20 @@ def download(
     console.print(f"[green]✓[/green] аудиофайлов готово: {len(paths)}")
 
 
+@app.command(name="prepare-audio")
+def prepare_audio_command(
+    course: str = CourseOption,
+    force: bool = ForceOption,
+    jobs: int = typer.Option(8, "--jobs", help="Сколько ffmpeg запускать параллельно"),
+) -> None:
+    """Сконвертировать аудио в 16 кГц WAV — иначе Whisper декодирует его сам и медленно."""
+
+    from examprep.download import prepare_audio
+
+    paths = prepare_audio(course, force=force, jobs=jobs)
+    console.print(f"[green]✓[/green] WAV готово: {len(paths)}")
+
+
 @app.command()
 def transcribe(
     course: str = CourseOption,

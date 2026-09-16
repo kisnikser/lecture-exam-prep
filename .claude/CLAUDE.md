@@ -90,7 +90,8 @@ pnpm dev (site читает ../data)
 │   │   └── sync_audio.sh              # rsync audio/ на сервер
 │   ├── src/examprep/
 │   │   ├── cli.py                     # typer: validate | ingest | download | transcribe | index |
-│   │   │                              #        retrieve | answer | status | export-index
+│   │   │                              #        prepare-audio | retrieve | answer | status |
+│   │   │                              #        export-index
 │   │   ├── config.py                  # pydantic-settings
 │   │   ├── schemas.py                 # pydantic-модели всех артефактов (источник истины)
 │   │   ├── store.py                   # чтение/запись артефактов data/ через модели
@@ -250,6 +251,13 @@ questions:
 - `multi_gpu.py`: очередь видео и N воркеров (N = число GPU, `TRANSCRIBE_GPUS=0,1,…`); каждый воркер — отдельный процесс со своим `CUDA_VISIBLE_DEVICES`.
 - `clean.py`: удаление повторяющихся сегментов и типичных галлюцинаций («Субтитры сделал…», «Продолжение следует…»), нормализация пробелов. Словарь замен — `data/courses/<slug>/replacements.txt`, по строке `неверно -> верно`.
 - `captions.py` — быстрый режим для отладки пайплайна (`--mode captions`), не основной.
+- **`prepare-audio` обязателен перед `transcribe`.** Whisper декодирует сжатое аудио через PyAV в один
+  поток: на 85-минутной лекции это заняло ~20 минут при простаивающих GPU. `ffmpeg` делает то же за
+  секунды, поэтому аудио один раз конвертируется в 16 кГц моно WAV, а Whisper читает готовый PCM.
+  `transcribe_source()` берёт WAV, если он есть, иначе исходный m4a.
+- Идентификатор видео на YouTube может начинаться с дефиса (в этом курсе — `-SSdI8Rsj64`). В Python это
+  безразлично, но в шелле такое имя уходит в команду как опция: в скриптах только `./`-префикс или
+  абсолютные пути.
 
 ## Сайт (MVP)
 
@@ -274,10 +282,11 @@ cd pipeline && uv sync
 uv run examprep validate                                     # схемы data/question-sets/ и course.json
 uv run examprep ingest   --course hps-skvorchevsky          # читает data/courses/hps-skvorchevsky/sources.txt
 uv run examprep download --course hps-skvorchevsky
-./scripts/sync_audio.sh hps-skvorchevsky                     # rsync на сервер (хост из .env: GPU_HOST)
+./scripts/sync_audio.sh hps-skvorchevsky                     # rsync (или tar) на сервер, хост из .env: GPU_HOST
 
 # --- GPU-сервер ---
 cd pipeline && uv sync --extra gpu
+uv run examprep prepare-audio --course hps-skvorchevsky      # m4a → 16 кГц WAV, обязательно перед transcribe
 uv run examprep transcribe --course hps-skvorchevsky --gpus 0,1,2,3,4,5,6,7
 uv run examprep index      --course hps-skvorchevsky
 uv run examprep retrieve   --course hps-skvorchevsky --question s13   # отладка: top-K на глаз
@@ -299,7 +308,7 @@ cd site && pnpm lint && pnpm typecheck && pnpm test
 ## Этапы и критерии готовности
 
 1. **Каркас.** Структура репо, `schemas.py`, генерация TS-типов, CI (`ci.yml`: lint + tests, без GPU). Готовые файлы в `data/question-sets/` проходят валидацию схемой.
-2. **Ingest + download.** `course.json` по реальному плейлисту; аудио скачано хотя бы в одном из мест (сервер или ноутбук).
+2. **Ingest + download.** `course.json` по реальному плейлисту; аудио скачано хотя бы в одном из мест (сервер или ноутбук) и сконвертировано в WAV (`prepare-audio`).
 3. **Transcribe.** Одна лекция вручную проверена на качество (имена философов, термины); затем весь курс на 8 GPU; `status` показывает 100%.
 4. **Index.** Для 3 тестовых билетов top-40 на глаз содержит нужные фрагменты (`examprep retrieve --question …`).
 5. **Answer v1.** 5 билетов (минимум 3 из курса и 2 общих, из них 1 без пары в crosswalk) сгенерированы, вручную проверены (цитаты подтверждают утверждения, структура подходит для устного ответа). Итерации промпта.

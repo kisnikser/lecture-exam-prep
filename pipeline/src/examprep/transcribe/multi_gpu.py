@@ -14,7 +14,7 @@ from queue import Empty
 import structlog
 
 from examprep.config import course_dir
-from examprep.download import audio_path
+from examprep.download import transcribe_source
 from examprep.store import load_course, save_transcript
 
 log = structlog.get_logger()
@@ -30,7 +30,7 @@ def pending_videos(slug: str, force: bool = False, limit: int | None = None) -> 
 
     pending = []
     for source in course.sources:
-        if not audio_path(slug, source.video_id).exists():
+        if not transcribe_source(slug, source.video_id).exists():
             log.warning("transcribe.no_audio", video_id=source.video_id)
             continue
         if not force and (transcripts_dir / f"{source.video_id}.json").exists():

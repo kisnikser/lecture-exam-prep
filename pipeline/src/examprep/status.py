@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from examprep import store
 from examprep.config import course_dir, get_settings
-from examprep.download import audio_path
+from examprep.download import transcribe_source, wav_path
 from examprep.schemas import Coverage
 
 
@@ -62,7 +62,8 @@ def course_status(slug: str, with_llm: bool = False) -> CourseStatus:
     status = CourseStatus(slug=slug)
     total = len(course.sources)
 
-    audio = sum(1 for s in course.sources if audio_path(slug, s.video_id).exists())
+    audio = sum(1 for s in course.sources if transcribe_source(slug, s.video_id).exists())
+    prepared = sum(1 for s in course.sources if wav_path(slug, s.video_id).exists())
     transcripts = _count("transcripts/*.json", slug)
     chunks_path = course_dir(slug) / "chunks.jsonl"
     chunks = sum(1 for _ in chunks_path.open(encoding="utf-8")) if chunks_path.exists() else 0
@@ -75,6 +76,7 @@ def course_status(slug: str, with_llm: bool = False) -> CourseStatus:
     status.stages = [
         Stage("ingest", total, total, "источников в course.json"),
         Stage("download", audio, total, "аудиофайлов"),
+        Stage("prepare-audio", prepared, total, "16 кГц WAV для Whisper"),
         Stage("transcribe", transcripts, total, "транскриптов"),
         Stage("index", chunks, chunks, f"чанков; эмбеддинги: {'есть' if embeddings else 'нет'}"),
         Stage("extract", extracts, len(questions), "извлечений"),

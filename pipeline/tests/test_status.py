@@ -13,6 +13,7 @@ def test_status_lists_every_stage() -> None:
     assert [stage.name for stage in report.stages] == [
         "ingest",
         "download",
+        "prepare-audio",
         "transcribe",
         "index",
         "extract",

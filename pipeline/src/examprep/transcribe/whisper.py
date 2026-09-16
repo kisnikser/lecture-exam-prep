@@ -6,7 +6,7 @@ import structlog
 
 from examprep.clean import clean_segments, load_replacements
 from examprep.config import course_dir, get_settings
-from examprep.download import audio_path
+from examprep.download import transcribe_source
 from examprep.schemas import Segment, Transcript
 from examprep.store import load_course, read_lines
 
@@ -80,7 +80,7 @@ def transcribe_one(
     model_size = model_size or settings.whisper_model
     device, compute_type = resolve_device(device)
 
-    path = audio_path(slug, video_id)
+    path = transcribe_source(slug, video_id)
     if not path.exists():
         raise FileNotFoundError(f"нет аудио для {video_id}: {path}")
 

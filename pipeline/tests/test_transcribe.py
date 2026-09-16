@@ -20,5 +20,5 @@ def test_initial_prompt_is_built_from_the_glossary() -> None:
 
 
 def test_pending_videos_skips_sources_without_audio(monkeypatch) -> None:
-    monkeypatch.setattr(multi_gpu, "audio_path", lambda slug, video_id: Path("/nonexistent"))
+    monkeypatch.setattr(multi_gpu, "transcribe_source", lambda slug, video_id: Path("/nonexistent"))
     assert multi_gpu.pending_videos(SLUG) == []
