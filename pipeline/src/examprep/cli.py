@@ -92,6 +92,11 @@ def transcribe(
     video: str | None = typer.Option(None, "--video", help="Только это видео, по его id"),
     timestamps: str = typer.Option("word", "--timestamps", help="word | sequential | chunk"),
     per_gpu: int = typer.Option(1, "--per-gpu", help="Сколько лекций считать на одной карте"),
+    glossary_prompt: bool = typer.Option(
+        False,
+        "--glossary-prompt/--no-glossary-prompt",
+        help="Подсказывать Whisper глоссарий (рискованно: модель распознаёт сам промпт)",
+    ),
 ) -> None:
     """Транскрибировать подготовленный WAV через Whisper на torch."""
 
@@ -116,6 +121,7 @@ def transcribe(
         video_id=video,
         timestamps=timestamps,
         per_gpu=per_gpu,
+        glossary_prompt=glossary_prompt,
     )
     console.print(f"[green]✓[/green] транскриптов готово за этот запуск: {len(done)}")
 

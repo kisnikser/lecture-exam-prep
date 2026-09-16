@@ -64,12 +64,18 @@ def _init_worker(gpu_queue: MpQueue[int]) -> None:
     os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 
-def _work(task: tuple[str, str, str | None, str]) -> str | None:
-    slug, video_id, model_size, timestamps = task
+def _work(task: tuple[str, str, str | None, str, bool]) -> str | None:
+    slug, video_id, model_size, timestamps, glossary_prompt = task
     from examprep.transcribe.whisper import transcribe_one
 
     try:
-        transcript = transcribe_one(slug, video_id, model_size=model_size, timestamps=timestamps)
+        transcript = transcribe_one(
+            slug,
+            video_id,
+            model_size=model_size,
+            timestamps=timestamps,
+            glossary_prompt=glossary_prompt,
+        )
         save_transcript(slug, transcript)
     except Exception:
         log.exception("transcribe.failed", video_id=video_id)
@@ -86,6 +92,7 @@ def transcribe_course(
     video_id: str | None = None,
     timestamps: str = "word",
     per_gpu: int = 1,
+    glossary_prompt: bool = False,
 ) -> list[str]:
     videos = pending_videos(slug, force=force, limit=limit)
     if video_id is not None:
@@ -96,7 +103,7 @@ def transcribe_course(
         log.info("transcribe.nothing_to_do", slug=slug)
         return []
 
-    tasks = [(slug, video_id, model_size, timestamps) for video_id in videos]
+    tasks = [(slug, video_id, model_size, timestamps, glossary_prompt) for video_id in videos]
     slots = gpu_slots(gpus, per_gpu)
     workers = min(len(slots), len(tasks))
 

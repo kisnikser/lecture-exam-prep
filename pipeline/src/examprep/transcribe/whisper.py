@@ -283,6 +283,7 @@ def transcribe_one(
     model_size: str | None = None,
     device: str | None = None,
     timestamps: str = "word",
+    glossary_prompt: bool = False,
 ) -> Transcript:
     settings = get_settings()
     name = model_id(model_size or settings.whisper_model)
@@ -300,9 +301,15 @@ def transcribe_one(
         "task": "transcribe",
         "num_beams": BEAM_SIZE,
     }
-    prompt = build_initial_prompt(slug)
-    if prompt:
-        generate_kwargs["prompt_ids"] = _prompt_ids(name, prompt, device)
+    # The glossary is off by default. Windowed decoding applies the prompt to
+    # every 30-second window, and the model transcribes the prompt itself often
+    # enough to matter: measured on one lecture it swallowed 19% of the timeline
+    # and replaced the speech there with lists of names. Misheard names are
+    # fixed afterwards through replacements.txt, which cannot eat the audio.
+    if glossary_prompt:
+        prompt = build_initial_prompt(slug)
+        if prompt:
+            generate_kwargs["prompt_ids"] = _prompt_ids(name, prompt, device)
 
     result = _run(
         _pipeline(name, device, dtype, timestamps),
