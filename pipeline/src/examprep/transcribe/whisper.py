@@ -40,6 +40,9 @@ WORD_PAUSE_S = 0.6
 MAX_SEGMENT_S = 20.0
 WORD_BATCH_SIZE = 4
 
+# Медианный темп речи по этому курсу, замерен на 21 лекции (9691 сегмент).
+SPEECH_CHARS_PER_SECOND = 12.5
+
 _PIPELINES: dict[tuple[str, str, str, str], Any] = {}
 
 
@@ -257,6 +260,30 @@ def _chunk_bounds(
     return begin, begin
 
 
+def _close_empty_span(
+    start: float,
+    end: float,
+    text: str,
+    next_start: float | None,
+    duration: float,
+) -> float:
+    """Give a zero-length segment the span its text would have taken to say.
+
+    Whisper occasionally reports a segment that starts and ends at the same
+    moment while holding a paragraph of speech. The start is still where the
+    speech begins, so it is kept; the end is estimated from how long that many
+    characters take at the pace of these lectures, and never runs past the next
+    segment or the recording.
+    """
+
+    if end > start or not text.strip():
+        return end
+
+    spoken = start + len(text) / SPEECH_CHARS_PER_SECOND
+    ceiling = min(next_start, duration) if next_start is not None else duration
+    return min(spoken, max(ceiling, start))
+
+
 def _segments_from(chunks: list[dict[str, Any]], duration: float) -> list[Segment]:
     """Turn Whisper's chunk timestamps into segments.
 
@@ -281,7 +308,9 @@ def _segments_from(chunks: list[dict[str, Any]], duration: float) -> list[Segmen
             duration,
             last=index == len(chunks) - 1,
         )
-        segments.append(Segment(start=start_s, end=end_s, text=str(chunk.get("text", ""))))
+        text = str(chunk.get("text", ""))
+        end_s = _close_empty_span(start_s, end_s, text, next_start, duration)
+        segments.append(Segment(start=start_s, end=end_s, text=text))
     return segments
 
 

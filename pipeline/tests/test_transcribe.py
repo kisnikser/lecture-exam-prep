@@ -160,3 +160,34 @@ def test_open_end_of_the_last_chunk_is_the_duration() -> None:
     from examprep.transcribe.whisper import _chunk_bounds
 
     assert _chunk_bounds(10.0, None, None, duration=50.0, last=True) == (10.0, 50.0)
+
+
+def test_zero_length_segment_gets_a_span_from_its_text() -> None:
+    """Whisper sometimes reports a paragraph as lasting no time at all."""
+
+    from examprep.transcribe.whisper import SPEECH_CHARS_PER_SECOND, _close_empty_span
+
+    text = "а" * 125
+    end = _close_empty_span(100.0, 100.0, text, next_start=None, duration=5000.0)
+
+    assert end == 100.0 + 125 / SPEECH_CHARS_PER_SECOND
+
+
+def test_estimated_span_does_not_reach_the_next_segment() -> None:
+    from examprep.transcribe.whisper import _close_empty_span
+
+    end = _close_empty_span(100.0, 100.0, "а" * 1000, next_start=103.0, duration=5000.0)
+
+    assert end == 103.0
+
+
+def test_a_real_span_is_left_alone() -> None:
+    from examprep.transcribe.whisper import _close_empty_span
+
+    assert _close_empty_span(10.0, 25.0, "речь", next_start=30.0, duration=100.0) == 25.0
+
+
+def test_an_empty_segment_stays_empty() -> None:
+    from examprep.transcribe.whisper import _close_empty_span
+
+    assert _close_empty_span(10.0, 10.0, "   ", next_start=None, duration=100.0) == 10.0
