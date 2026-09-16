@@ -234,19 +234,27 @@ def _chunk_bounds(
     duration: float,
     last: bool,
 ) -> tuple[float, float]:
-    """Whisper's long-form chunks often miss or invert the end timestamp."""
+    """Whisper's long-form chunks often miss or invert the end timestamp.
 
-    start = max(0.0, start)
+    Both bounds are clamped to the audio before being ordered. Whisper does
+    predict timestamps past the end of the recording, and clamping only the end
+    of an already swapped pair puts the segment back to front.
+    """
+
+    def clamp(value: float) -> float:
+        return min(max(0.0, value), duration)
+
+    begin = clamp(start)
     if end is not None:
-        closed = float(end)
-        if closed < start:
-            start, closed = closed, start
-        return start, min(closed, duration)
+        finish = clamp(float(end))
+        return (finish, begin) if finish < begin else (begin, finish)
     if last:
-        return start, duration
-    if next_start is not None and next_start >= start:
-        return start, min(float(next_start), duration)
-    return start, start
+        return begin, duration
+    if next_start is not None:
+        following = clamp(float(next_start))
+        if following >= begin:
+            return begin, following
+    return begin, begin
 
 
 def _segments_from(chunks: list[dict[str, Any]], duration: float) -> list[Segment]:

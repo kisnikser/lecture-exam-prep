@@ -131,3 +131,32 @@ def test_per_gpu_repeats_each_card() -> None:
     assert gpu_slots([0, 1, 2]) == [0, 1, 2]
     assert gpu_slots([0], per_gpu=0) == [0]
     assert gpu_slots(None) == []
+
+
+def test_bounds_past_the_end_of_the_audio_stay_ordered() -> None:
+    """The crash from the full run: both timestamps sat beyond the recording."""
+
+    from examprep.transcribe.whisper import _chunk_bounds
+
+    start, end = _chunk_bounds(5334.02, 5318.4145, None, duration=5057.0, last=False)
+
+    assert start <= end
+    assert end <= 5057.0
+
+
+def test_inverted_bounds_inside_the_audio_are_swapped() -> None:
+    from examprep.transcribe.whisper import _chunk_bounds
+
+    assert _chunk_bounds(2583.44, 2575.0, None, duration=5000.0, last=False) == (2575.0, 2583.44)
+
+
+def test_open_end_is_closed_by_the_next_chunk() -> None:
+    from examprep.transcribe.whisper import _chunk_bounds
+
+    assert _chunk_bounds(10.0, None, 25.0, duration=5000.0, last=False) == (10.0, 25.0)
+
+
+def test_open_end_of_the_last_chunk_is_the_duration() -> None:
+    from examprep.transcribe.whisper import _chunk_bounds
+
+    assert _chunk_bounds(10.0, None, None, duration=50.0, last=True) == (10.0, 50.0)
