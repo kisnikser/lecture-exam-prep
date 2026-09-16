@@ -327,27 +327,6 @@ a {
   padding: 0 0.1em;
 }
 
-.reveal {
-  display: block;
-  width: 100%;
-  padding: 1rem;
-  min-height: 44px;
-  border: 1px dashed var(--rule-strong);
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--ink-soft);
-  font: inherit;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease-out,
-    color 0.15s ease-out;
-}
-
-.reveal:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
 
 /*
  * Самый важный элемент страницы. Студент должен понимать, что здесь говорит
@@ -426,7 +405,6 @@ a {
 @media print {
   .site-header,
   .tabs,
-  .reveal,
   .breadcrumb {
     display: none;
   }

@@ -17,12 +17,10 @@ export function QuestionPage({ index }: { index: DataIndex }) {
   const found = findQuestion(index, questionId)
   const [answer, setAnswer] = useState<Answer | null>(null)
   const [missing, setMissing] = useState(false)
-  const [revealed, setRevealed] = useState(false)
 
   useEffect(() => {
     setAnswer(null)
     setMissing(false)
-    setRevealed(false)
     loadAnswer(slug, questionId)
       .then(setAnswer)
       .catch(() => setMissing(true))
@@ -62,13 +60,7 @@ export function QuestionPage({ index }: { index: DataIndex }) {
 
       {missing && <p className="muted">Ответ ещё не сгенерирован.</p>}
 
-      {answer && !revealed && (
-        <button className="reveal" onClick={() => setRevealed(true)}>
-          Показать ответ
-        </button>
-      )}
-
-      {answer && revealed && (
+      {answer && (
         <>
           <div className="answer">
             <Markdown remarkPlugins={[remarkGfm]}>{answer.answer_md}</Markdown>
