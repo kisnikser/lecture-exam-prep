@@ -225,8 +225,9 @@ questions:
 ## LLM
 
 - Единый клиент `llm.py` поверх OpenAI-compatible API.
-- **По умолчанию:** vLLM на GPU-сервере, `LLM_BASE_URL=http://localhost:8000/v1`. Модель задаётся в `LLM_MODEL`. Стартовый кандидат — `Qwen/Qwen3-235B-A22B-Instruct-2507-FP8` с `--tensor-parallel-size 8`; перед запуском сверить актуальность и качество русского языка.
-- **Альтернатива:** Anthropic API (`LLM_PROVIDER=anthropic`, `LLM_API_KEY`) — если open-weight качество не устроит на eval. Второй open-weight кандидат под сравнение — GLM-4.6 в FP8 (влезает в 8×H100). DeepSeek-V3.x в FP8 (~670 ГБ) в 640 ГБ HBM не помещается.
+- **По умолчанию:** vLLM на GPU-сервере, `LLM_BASE_URL=http://localhost:8000/v1`. Модель задаётся в `LLM_MODEL`. Стартовый кандидат — `Qwen/Qwen3.8-Flash-Next-FP8` (125B всего / 6B активных + 51B n-gram embedding + 4B MTP, ~180 ГБ в FP8, контекст 262k) с `--tensor-parallel-size 8`.
+- **Thinking-режим.** Qwen3.8-Flash-Next по умолчанию генерирует `<think>…</think>` перед ответом. Для extract его надо выключать (параметр шаблона чата / `chat_template_kwargs`), иначе 1880 вызовов утонут в рассуждениях; для synthesize можно оставить включённым и сравнить на eval. `llm.py` обязан отрезать блок `<think>` до парсинга JSON, даже когда режим выключен.
+- **Альтернатива:** Anthropic API (`LLM_PROVIDER=anthropic`, `LLM_API_KEY`) — если open-weight качество не устроит на eval. Запасной open-weight вариант — `Qwen/Qwen3-235B-A22B-Instruct-2507-FP8` (~235 ГБ, не thinking).
 - Для JSON-ответов использовать structured outputs / guided decoding vLLM (`response_format` с JSON Schema), где доступно.
 - `temperature` 0.2–0.3 для synthesize, 0 для extract.
 
@@ -299,7 +300,7 @@ cd site && pnpm lint && pnpm typecheck && pnpm test
 
 - **Bot-check YouTube на сервере** — fallback: скачивание на ноутбуке. Не реализовывать иные обходы.
 - **Общий список шире курса Скворчевского** — `coverage`, `outside_lectures_md`, явная пометка в UI.
-- **Искажение имён и терминов Whisper** — глоссарий, ручная проверка первой лекции, при необходимости словарь замен в `clean.py`. Если large-v3 будет путать имена философов, сравнить на той же лекции с GigaAM-v2 (русскоязычная ASR) или NVIDIA Canary-1b-v2; минус обеих — длинные записи и таймкоды придётся резать самим.
+- **Искажение имён и терминов Whisper** — глоссарий, ручная проверка первой лекции, при необходимости словарь замен в `clean.py`. Если large-v3 будет путать имена философов, сравнить на той же лекции с GigaAM-v2, NVIDIA Canary-1b-v2 или Gemma 4 E4B. У всех трёх один и тот же минус: длинные записи и таймкоды придётся резать самим — Gemma 4 принимает максимум 30 с аудио за запрос и таймкодов не даёт вовсе, тогда как весь UI держится на ссылке `https://youtu.be/<id>?t=<sec>`.
 - **Нехватка VRAM / конфликт GPU** — строгий порядок этапов; `status` проверяет, что vLLM доступен, до старта `answer`.
 - **Невалидный JSON от модели** — guided decoding, ретрай, логирование сырых ответов в `pipeline/.logs/` (в `.gitignore`).
 - **Авторские права** — репозиторий публичный: коммитятся только транскрипты и ответы, никакого аудио/видео; дисклеймер в README.

@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     llm_provider: str = "vllm"
     llm_base_url: str = "http://localhost:8000/v1"
-    llm_model: str = "Qwen/Qwen3-235B-A22B-Instruct-2507-FP8"
+    llm_model: str = "Qwen/Qwen3.8-Flash-Next-FP8"
     llm_api_key: str = "dummy"
     llm_concurrency: int = 64
 
