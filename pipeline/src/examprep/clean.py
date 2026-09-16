@@ -7,7 +7,7 @@ quoted in an answer, so they are dropped before anything is indexed.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 import structlog
 
@@ -60,10 +60,46 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+GLOSSARY_ECHO_SHARE = 0.6
+GLOSSARY_MIN_TERM_LEN = 5
+
+
+def is_glossary_echo(
+    text: str,
+    terms: Sequence[str],
+    share: float = GLOSSARY_ECHO_SHARE,
+) -> bool:
+    """Whether the segment is the glossary prompt read back as speech.
+
+    Whisper is given the course glossary as a prompt and sometimes transcribes
+    the prompt itself, which would put names into the lecturer's mouth and from
+    there into a citation. A run of glossary terms filling most of a segment is
+    that echo; a sentence that merely mentions one philosopher is not.
+    """
+
+    lowered = text.lower()
+    if not lowered:
+        return False
+
+    covered = 0
+    matched = 0
+    for term in terms:
+        normalized = term.lower().strip()
+        if len(normalized) < GLOSSARY_MIN_TERM_LEN:
+            continue
+        occurrences = lowered.count(normalized)
+        if occurrences:
+            matched += 1
+            covered += len(normalized) * occurrences
+
+    return matched >= 2 and covered / len(lowered) >= share
+
+
 def clean_segments(
     segments: list[Segment],
     replacements: Mapping[str, str] | None = None,
     max_repeats: int = 2,
+    glossary: Sequence[str] | None = None,
 ) -> list[Segment]:
     """Normalize whitespace, drop hallucinations and collapse looped segments."""
 
@@ -75,6 +111,9 @@ def clean_segments(
         if replacements:
             text = apply_replacements(text, replacements)
         if not text or HALLUCINATION_RE.match(text):
+            continue
+        if glossary and is_glossary_echo(text, glossary):
+            log.info("clean.glossary_echo", text=text[:60])
             continue
 
         previous = cleaned[-1].text if cleaned else None

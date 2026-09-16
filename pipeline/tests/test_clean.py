@@ -35,3 +35,47 @@ def test_replacements_are_case_insensitive_and_whole_word() -> None:
     assert apply_replacements("поппер и попперовский", {"поппер": "Поппер"}) == (
         "Поппер и попперовский"
     )
+
+
+GLOSSARY = [
+    "Карл Поппер",
+    "Томас Кун",
+    "Бас ван Фраассен",
+    "Вильгельм Гумбольдт",
+    "фальсификационизм",
+    "наука",
+]
+
+
+def test_a_run_of_glossary_terms_is_dropped() -> None:
+    from examprep.clean import is_glossary_echo
+
+    echo = "Бас ван Фраассен, Вильгельм Гумбольдт, Карл Поппер"
+    assert is_glossary_echo(echo, GLOSSARY)
+
+
+def test_a_sentence_mentioning_one_name_is_kept() -> None:
+    from examprep.clean import is_glossary_echo
+
+    normal = "Карл Поппер предложил считать критерием научности возможность опровержения."
+    assert not is_glossary_echo(normal, GLOSSARY)
+
+
+def test_two_names_inside_a_real_sentence_are_kept() -> None:
+    from examprep.clean import is_glossary_echo
+
+    normal = (
+        "Томас Кун спорит с тем, как Карл Поппер описывает развитие науки, "
+        "и вводит понятие парадигмы вместо последовательной серии опровержений."
+    )
+    assert not is_glossary_echo(normal, GLOSSARY)
+
+
+def test_clean_segments_drops_the_echo() -> None:
+    segments = [
+        seg("Бас ван Фраассен, Вильгельм Гумбольдт, Карл Поппер", 0),
+        seg("Сегодня мы начнём с научной революции.", 5),
+    ]
+    cleaned = clean_segments(segments, glossary=GLOSSARY)
+
+    assert [s.text for s in cleaned] == ["Сегодня мы начнём с научной революции."]

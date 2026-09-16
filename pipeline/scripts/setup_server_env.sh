@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Подготовка окружения на GPU-сервере.
 #
-# Создаёт отдельный venv в pipeline/.venv поверх общего conda-интерпретатора.
-# Само conda-окружение НЕ меняется: оно подключается только на чтение через
-# --system-site-packages, все пакеты ставятся внутрь .venv. Каталог общего
-# окружения доступен на запись, поэтому перед каждой установкой скрипт
-# проверяет, что активирован именно наш venv.
+# Создаёт pipeline/.venv поверх общего conda-интерпретатора.
+# Само conda-окружение НЕ меняется: torch, transformers и huggingface-hub
+# читаются оттуда через --system-site-packages. Каталог общего окружения
+# доступен на запись, поэтому перед каждой установкой скрипт проверяет,
+# что активирован именно наш venv.
+#
+# На кластере нельзя `uv sync --extra gpu`: extra ставит transformers 5 и
+# huggingface-hub 1.x в venv, они перекрывают conda и ломают ASR
+# (transformers 4.57 требует huggingface-hub<1).
 set -euo pipefail
 
 BASE_PYTHON="${BASE_PYTHON:-/home/user/conda/envs/kandinsky-cuda13.0/bin/python}"
@@ -23,15 +27,37 @@ if [ "${VIRTUAL_ENV:-}" != "$PIPELINE_DIR/.venv" ]; then
   exit 1
 fi
 
-uv pip install -e ".[asr]"
-# torch и transformers берём из общего окружения, поэтому без зависимостей.
+uv pip install -e .
+# Эмбеддинги для index; torch/transformers/huggingface-hub — из conda.
 uv pip install --no-deps sentence-transformers
 
-python - <<'PY'
-import ctranslate2, faster_whisper, sentence_transformers, torch, transformers
+# Прошлый sync мог затащить эти пакеты в venv. Тогда они перекрывают conda.
+uv pip uninstall -y huggingface-hub tokenizers transformers torch accelerate 2>/dev/null || true
 
-print(f"faster_whisper {faster_whisper.__version__} | ctranslate2 {ctranslate2.__version__}")
+python - <<'PY'
+from pathlib import Path
+
+import huggingface_hub
+import sentence_transformers
+import torch
+import transformers
+
+venv = Path(".venv").resolve()
+
+
+def origin(mod) -> Path:
+    return Path(mod.__file__).resolve()
+
+
+for mod in (torch, transformers, huggingface_hub):
+    path = origin(mod)
+    if venv in path.parents:
+        raise SystemExit(f"{mod.__name__} берётся из venv ({path}), должен быть из conda")
+
 print(f"sentence-transformers {sentence_transformers.__version__}")
-print(f"torch {torch.__version__} | transformers {transformers.__version__} (из общего окружения)")
-print(f"CUDA-устройств: {ctranslate2.get_cuda_device_count()}")
+print(
+    f"torch {torch.__version__} | transformers {transformers.__version__} "
+    f"| huggingface_hub {huggingface_hub.__version__} (из общего окружения)"
+)
+print(f"CUDA-устройств: {torch.cuda.device_count()}")
 PY

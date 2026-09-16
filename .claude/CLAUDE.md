@@ -40,13 +40,13 @@
 перед долгим запуском.
 
 Общее conda-окружение `/home/user/conda/envs/kandinsky-cuda13.0` (Python 3.12, torch, transformers)
-**менять нельзя**, хотя каталог и доступен на запись. Поэтому `scripts/setup_server_env.sh` создаёт
-`pipeline/.venv` поверх его интерпретатора с `--system-site-packages`: torch и transformers читаются
-оттуда, а `faster-whisper` и прочее ставится только внутрь venv. Любая установка — исключительно при
-активированном venv; скрипт это проверяет и отказывается работать иначе.
+**менять нельзя**, хотя каталог и доступен на запись.
+Поэтому `scripts/setup_server_env.sh` создаёт `pipeline/.venv` поверх его интерпретатора с `--system-site-packages`: torch и transformers читаются оттуда, пакеты проекта ставятся только внутрь venv.
+Любая установка — исключительно при активированном venv; скрипт это проверяет и отказывается работать иначе.
 
-Известная тонкость: `faster-whisper` тянет свежий `tokenizers`, который перекрывает версию из общего
-окружения и ломает тамошний `transformers`. Версию `tokenizers` держим совместимой с обоими.
+На кластере нельзя `uv sync --extra gpu`: extra ставит transformers 5 и huggingface-hub 1.x в venv, они перекрывают conda и ломают ASR (`transformers 4.57` требует `huggingface-hub<1`).
+`sentence-transformers` ставить только с `--no-deps`.
+Если в venv уже лежит `huggingface-hub>=1`, удалить его — подхватится 0.36 из conda.
 
 ## Топология вычислений
 
@@ -55,7 +55,7 @@
 ────────                                  ──────────────────────────
 examprep ingest   (yt-dlp, метаданные)
 examprep download (yt-dlp → audio/*.m4a)
-        │ rsync audio/ ───────────────▶   examprep transcribe   (faster-whisper large-v3, 8 воркеров, 1 на GPU)
+        │ rsync audio/ ───────────────▶   examprep transcribe   (transformers whisper-large-v3, 8 воркеров, 1 на GPU)
         │                                 examprep index        (bge-m3 на GPU)
         │                                 vllm serve …          (после освобождения GPU от Whisper)
         │                                 examprep answer       (LLM через OpenAI-compatible API)
@@ -294,7 +294,7 @@ uv run examprep download --course hps-skvorchevsky
 ./scripts/sync_audio.sh hps-skvorchevsky                     # rsync (или tar) на сервер, хост из .env: GPU_HOST
 
 # --- GPU-сервер ---
-cd pipeline && uv sync --extra gpu
+cd pipeline && ./scripts/setup_server_env.sh                 # venv поверх conda; не --extra gpu
 uv run examprep prepare-audio --course hps-skvorchevsky      # m4a → 16 кГц WAV, обязательно перед transcribe
 uv run examprep transcribe --course hps-skvorchevsky --gpus 0,1,2,3,4,5,6,7
 uv run examprep index      --course hps-skvorchevsky

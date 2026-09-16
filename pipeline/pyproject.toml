@@ -21,7 +21,9 @@ dependencies = [
 
 [project.optional-dependencies]
 # На GPU-сервере torch и transformers берутся из общего conda-окружения,
-# поэтому базовая установка их не тянет. Extra — для машин, где их нет.
+# поэтому базовая установка их не тянет. Extra — только для машин, где их нет:
+# на кластере `uv sync --extra gpu` перекрывает conda huggingface-hub 0.36
+# пакетом 1.x и ломает transformers 4.57.
 gpu = [
     "torch>=2.4",
     "transformers>=4.44",

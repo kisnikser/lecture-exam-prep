@@ -89,8 +89,11 @@ def transcribe(
     model: str | None = typer.Option(None, "--model", help="Модель Whisper, напр. large-v3"),
     force: bool = ForceOption,
     limit: int | None = typer.Option(None, "--limit", help="Обработать только первые N видео"),
+    video: str | None = typer.Option(None, "--video", help="Только это видео, по его id"),
+    timestamps: str = typer.Option("word", "--timestamps", help="word | sequential | chunk"),
+    per_gpu: int = typer.Option(1, "--per-gpu", help="Сколько лекций считать на одной карте"),
 ) -> None:
-    """Транскрибировать аудио через faster-whisper."""
+    """Транскрибировать подготовленный WAV через Whisper на torch."""
 
     from examprep.config import get_settings
     from examprep.transcribe.multi_gpu import transcribe_course
@@ -104,7 +107,16 @@ def transcribe(
     device, compute_type = resolve_device("cuda" if device_list else None)
     console.print(f"устройство: [bold]{device}[/bold] ({compute_type}), GPU: {device_list or '—'}")
 
-    done = transcribe_course(course, gpus=device_list, model_size=model, force=force, limit=limit)
+    done = transcribe_course(
+        course,
+        gpus=device_list,
+        model_size=model,
+        force=force,
+        limit=limit,
+        video_id=video,
+        timestamps=timestamps,
+        per_gpu=per_gpu,
+    )
     console.print(f"[green]✓[/green] транскриптов готово за этот запуск: {len(done)}")
 
 

@@ -32,7 +32,15 @@ CHUNK_LENGTH_S = 30
 BATCH_SIZE = 16
 BEAM_SIZE = 5
 
-_PIPELINES: dict[tuple[str, str, str], Any] = {}
+# Word timestamps come from cross-attention alignment rather than from what the
+# model predicts, so segments can be cut where the lecturer actually pauses.
+# Alignment keeps the attention weights of the whole batch, which at
+# BATCH_SIZE overflows an 80 GB card, hence the smaller batch here.
+WORD_PAUSE_S = 0.6
+MAX_SEGMENT_S = 20.0
+WORD_BATCH_SIZE = 4
+
+_PIPELINES: dict[tuple[str, str, str, str], Any] = {}
 
 
 def model_id(name: str) -> str:
@@ -100,39 +108,172 @@ def build_initial_prompt(slug: str) -> str | None:
     return f"{load_course(slug).title}. Имена и термины: {listed}."
 
 
-def _pipeline(name: str, device: str, dtype: str) -> Any:
-    key = (name, device, dtype)
+def _pipeline(name: str, device: str, dtype: str, timestamps: str) -> Any:
+    """Whisper as a transformers pipeline, in one of three timestamp modes.
+
+    ``chunk`` cuts fixed 30-second windows and transcribes them independently:
+    fast, because windows batch, but each window predicts timestamps on its own
+    scale and they do not stitch back into a coherent one.
+
+    ``sequential`` is Whisper's own long-form algorithm — the next window starts
+    where the model says the last utterance ended, carrying the text along as
+    context. Timestamps stay coherent across the file; nothing batches inside it.
+
+    ``word`` keeps the fast windows but aligns every word against the decoder's
+    cross-attention, which is the most precise and the most expensive.
+    """
+
+    key = (name, device, dtype, timestamps)
     if key not in _PIPELINES:
         import torch
         from transformers import pipeline
 
-        log.info("whisper.load", model=name, device=device, dtype=dtype)
-        _PIPELINES[key] = pipeline(
-            "automatic-speech-recognition",
-            model=name,
-            torch_dtype=getattr(torch, dtype),
-            device=device,
-            chunk_length_s=CHUNK_LENGTH_S,
-            batch_size=BATCH_SIZE,
-            return_timestamps=True,
-        )
+        options: dict[str, Any] = {
+            "torch_dtype": getattr(torch, dtype),
+            "device": device,
+            "return_timestamps": "word" if timestamps == "word" else True,
+        }
+        if timestamps != "sequential":
+            options["chunk_length_s"] = CHUNK_LENGTH_S
+
+        log.info("whisper.load", model=name, device=device, dtype=dtype, timestamps=timestamps)
+        _PIPELINES[key] = pipeline("automatic-speech-recognition", model=name, **options)
     return _PIPELINES[key]
+
+
+def _batch_size(timestamps: str) -> int:
+    """Sequential decoding has nothing to batch: each window follows the last."""
+
+    if timestamps == "sequential":
+        return 1
+    return WORD_BATCH_SIZE if timestamps == "word" else BATCH_SIZE
+
+
+def _run(pipe: Any, audio: np.ndarray, generate_kwargs: dict[str, Any], batch: int) -> Any:
+    """Transcribe, halving the batch whenever the card runs out of memory."""
+
+    import torch
+
+    while True:
+        try:
+            return pipe(
+                {"array": audio, "sampling_rate": SAMPLE_RATE},
+                generate_kwargs=generate_kwargs,
+                batch_size=batch,
+            )
+        except torch.cuda.OutOfMemoryError:
+            if batch <= 1:
+                raise
+            batch = max(1, batch // 2)
+            torch.cuda.empty_cache()
+            log.warning("whisper.oom_retry", batch_size=batch)
+
+
+def _span(start: float, end: float | None, duration: float) -> tuple[float, float]:
+    """A single word's bounds, clamped and un-inverted."""
+
+    begin = max(0.0, float(start))
+    finish = begin if end is None else float(end)
+    if finish < begin:
+        begin, finish = finish, begin
+    return min(begin, duration), min(finish, duration)
+
+
+def group_words(
+    words: list[dict[str, Any]],
+    duration: float,
+    pause_s: float = WORD_PAUSE_S,
+    max_segment_s: float = MAX_SEGMENT_S,
+) -> list[Segment]:
+    """Collect word-level timestamps into segments, cutting on pauses.
+
+    A new segment starts when the lecturer pauses longer than ``pause_s`` or
+    when the current one has run for ``max_segment_s``, which keeps segments
+    short enough for a citation to point at the right moment.
+    """
+
+    segments: list[Segment] = []
+    buffer: list[str] = []
+    seg_start: float | None = None
+    previous_end: float | None = None
+
+    def flush() -> None:
+        nonlocal buffer, seg_start, previous_end
+        text = "".join(buffer).strip()
+        if text and seg_start is not None:
+            end = max(previous_end if previous_end is not None else seg_start, seg_start)
+            segments.append(Segment(start=seg_start, end=min(end, duration), text=text))
+        buffer = []
+        seg_start = None
+
+    for word in words:
+        start, end = word.get("timestamp") or (None, None)
+        text = str(word.get("text", ""))
+        if start is None:
+            buffer.append(text)
+            continue
+
+        begin, finish = _span(start, end, duration)
+        if seg_start is None:
+            seg_start = begin
+        elif begin - (previous_end or begin) > pause_s or finish - seg_start > max_segment_s:
+            flush()
+            seg_start = begin
+
+        buffer.append(text)
+        previous_end = finish
+
+    flush()
+    return segments
+
+
+def _chunk_bounds(
+    start: float,
+    end: float | None,
+    next_start: float | None,
+    duration: float,
+    last: bool,
+) -> tuple[float, float]:
+    """Whisper's long-form chunks often miss or invert the end timestamp."""
+
+    start = max(0.0, start)
+    if end is not None:
+        closed = float(end)
+        if closed < start:
+            start, closed = closed, start
+        return start, min(closed, duration)
+    if last:
+        return start, duration
+    if next_start is not None and next_start >= start:
+        return start, min(float(next_start), duration)
+    return start, start
 
 
 def _segments_from(chunks: list[dict[str, Any]], duration: float) -> list[Segment]:
     """Turn Whisper's chunk timestamps into segments.
 
     The final chunk of a long recording sometimes comes back with an open end;
-    it is closed with the length of the audio.
+    it is closed with the length of the audio. A middle chunk may invert
+    start/end or omit the end entirely — both happen with ``chunk_length_s``.
     """
 
     segments: list[Segment] = []
-    for chunk in chunks:
+    for index, chunk in enumerate(chunks):
         start, end = chunk.get("timestamp") or (None, None)
         if start is None:
             continue
-        text = str(chunk.get("text", ""))
-        segments.append(Segment(start=float(start), end=float(end or duration), text=text))
+        next_start = None
+        if index + 1 < len(chunks):
+            nxt = (chunks[index + 1].get("timestamp") or (None, None))[0]
+            next_start = float(nxt) if nxt is not None else None
+        start_s, end_s = _chunk_bounds(
+            float(start),
+            float(end) if end is not None else None,
+            next_start,
+            duration,
+            last=index == len(chunks) - 1,
+        )
+        segments.append(Segment(start=start_s, end=end_s, text=str(chunk.get("text", ""))))
     return segments
 
 
@@ -141,6 +282,7 @@ def transcribe_one(
     video_id: str,
     model_size: str | None = None,
     device: str | None = None,
+    timestamps: str = "word",
 ) -> Transcript:
     settings = get_settings()
     name = model_id(model_size or settings.whisper_model)
@@ -162,14 +304,23 @@ def transcribe_one(
     if prompt:
         generate_kwargs["prompt_ids"] = _prompt_ids(name, prompt, device)
 
-    result = _pipeline(name, device, dtype)(
-        {"array": audio, "sampling_rate": SAMPLE_RATE},
-        generate_kwargs=generate_kwargs,
+    result = _run(
+        _pipeline(name, device, dtype, timestamps),
+        audio,
+        generate_kwargs,
+        _batch_size(timestamps),
     )
 
     duration = len(audio) / SAMPLE_RATE
-    segments = _segments_from(result.get("chunks") or [], duration)
-    cleaned = clean_segments(segments, load_replacements(slug))
+    chunks = result.get("chunks") or []
+    segments = (
+        group_words(chunks, duration) if timestamps == "word" else _segments_from(chunks, duration)
+    )
+    cleaned = clean_segments(
+        segments,
+        load_replacements(slug),
+        glossary=read_lines(course_dir(slug) / "glossary.txt"),
+    )
     log.info(
         "whisper.done",
         video_id=video_id,
