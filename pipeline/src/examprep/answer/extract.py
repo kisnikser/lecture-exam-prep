@@ -41,11 +41,17 @@ def timecode(seconds: float) -> str:
     return f"{total // 60:02d}:{total % 60:02d}"
 
 
-def input_hash(question: Question, candidates: list[Candidate], model: str) -> str:
-    """Identity of this extraction: the question, the fragments, model, prompt.
+def input_hash(
+    question: Question,
+    candidates: list[Candidate],
+    model: str,
+    template: str,
+) -> str:
+    """Identity of this extraction: question, fragments, model, prompt.
 
-    Re-running with the same inputs must be a no-op, and any change to the
-    retrieved set has to invalidate the result.
+    The prompt enters by its text, not by its file name: editing the wording
+    changes the answers, and a cache keyed on the name alone would keep serving
+    the old ones until somebody remembered to rename the file.
     """
 
     digest = hashlib.sha256()
@@ -54,7 +60,7 @@ def input_hash(question: Question, candidates: list[Candidate], model: str) -> s
         digest.update(candidate.chunk.chunk_id.encode("utf-8"))
         digest.update(candidate.chunk.text.encode("utf-8"))
     digest.update(model.encode("utf-8"))
-    digest.update(PROMPT_VERSION.encode("utf-8"))
+    digest.update(template.encode("utf-8"))
     return digest.hexdigest()
 
 
@@ -132,7 +138,7 @@ async def extract_question(
         readings=readings,
         model=client.model,
         prompt_version=PROMPT_VERSION,
-        input_hash=input_hash(question, candidates, client.model),
+        input_hash=input_hash(question, candidates, client.model, template),
     )
     save_extract(slug, extract)
     log.info(

@@ -15,8 +15,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 : "${VLLM_ENV:=/home/jovyan/degainanov/envs/vllm029-cu129}"
 : "${VLLM_PORT:=8000}"
 : "${VLLM_TP_SIZE:=8}"
-: "${VLLM_GPU_MEM_UTIL:=0.90}"
+: "${VLLM_GPU_MEM_UTIL:=0.85}"
 : "${VLLM_MAX_MODEL_LEN:=32768}"
+: "${VLLM_MAX_NUM_SEQS:=32}"
+: "${VLLM_MAX_BATCHED_TOKENS:=8192}"
 
 if [ ! -x "$VLLM_ENV/bin/vllm" ]; then
   echo "не найден vllm в $VLLM_ENV — задайте VLLM_ENV в .env" >&2
@@ -35,9 +37,18 @@ fi
 
 export PATH="$VLLM_ENV/bin:$PATH"
 
+# --enable-expert-parallel обязателен для этой модели. Её эксперты имеют
+# moe_intermediate_size = 640, а блок FP8-квантования равен 128: при делении
+# эксперта между восемью картами выходит кусок в 80 элементов, и vLLM падает
+# на "not divisible by weight quantization block_n". Экспертный параллелизм
+# раскладывает экспертов по рангам целиком и эту размерность не режет.
 exec "$VLLM_ENV/bin/vllm" serve "$LLM_MODEL" \
   --served-model-name "$LLM_MODEL" \
   --port "$VLLM_PORT" \
   --tensor-parallel-size "$VLLM_TP_SIZE" \
+  --enable-expert-parallel \
+  --moe-backend triton \
   --gpu-memory-utilization "$VLLM_GPU_MEM_UTIL" \
-  --max-model-len "$VLLM_MAX_MODEL_LEN"
+  --max-model-len "$VLLM_MAX_MODEL_LEN" \
+  --max-num-seqs "$VLLM_MAX_NUM_SEQS" \
+  --max-num-batched-tokens "$VLLM_MAX_BATCHED_TOKENS"

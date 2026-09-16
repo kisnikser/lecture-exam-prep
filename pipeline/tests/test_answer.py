@@ -200,3 +200,38 @@ class TestCitationTimecode:
         citations, _ = build_citations(response, {"abc123:0007": window})
 
         assert citations[0].start == 600.0
+
+
+class TestPromptEntersTheCacheKey:
+    """Editing a prompt must invalidate stored work, not be silently ignored."""
+
+    def _question(self):
+        from examprep.schemas import Question
+
+        return Question(id="s13", number=13, text="Концепция К. Поппера.")
+
+    def test_extract_hash_follows_the_prompt_text(self) -> None:
+        from examprep.answer.extract import input_hash
+        from examprep.retrieve import Candidate
+
+        candidates = [Candidate(chunk=chunk(), score=1.0)]
+        first = input_hash(self._question(), candidates, "m", "промпт")
+        second = input_hash(self._question(), candidates, "m", "промпт, но поправленный")
+
+        assert first != second
+
+    def test_synthesize_hash_follows_the_prompt_text(self) -> None:
+        from examprep.answer.synthesize import input_hash
+        from examprep.schemas import Extract
+
+        extract = Extract(
+            question_id="s13",
+            candidates=40,
+            model="m",
+            prompt_version="extract_v1",
+            input_hash="h",
+        )
+        first = input_hash(self._question(), extract, "m", "промпт")
+        second = input_hash(self._question(), extract, "m", "промпт, но поправленный")
+
+        assert first != second

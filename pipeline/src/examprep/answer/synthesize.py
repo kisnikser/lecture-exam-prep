@@ -68,7 +68,9 @@ class SynthesisResponse(BaseModel):
     readings: list[ReadingOut] = Field(default_factory=list)
 
 
-def input_hash(question: Question, extract: Extract, model: str) -> str:
+def input_hash(question: Question, extract: Extract, model: str, template: str = "") -> str:
+    """The prompt enters by its text, so editing it invalidates stored answers."""
+
     digest = hashlib.sha256()
     digest.update(question.text.encode("utf-8"))
     digest.update(extract.input_hash.encode("utf-8"))
@@ -76,7 +78,7 @@ def input_hash(question: Question, extract: Extract, model: str) -> str:
         digest.update(item.chunk_id.encode("utf-8"))
         digest.update(" ".join(item.points).encode("utf-8"))
     digest.update(model.encode("utf-8"))
-    digest.update(PROMPT_VERSION.encode("utf-8"))
+    digest.update((template or PROMPT_VERSION).encode("utf-8"))
     return digest.hexdigest()
 
 
@@ -232,7 +234,7 @@ async def synthesize_question(
         coverage=coverage,
         model=client.model,
         prompt_version=PROMPT_VERSION,
-        input_hash=input_hash(question, extract, client.model),
+        input_hash=input_hash(question, extract, client.model, template),
         generated_at=datetime.now(UTC),
     )
     save_answer(slug, answer)

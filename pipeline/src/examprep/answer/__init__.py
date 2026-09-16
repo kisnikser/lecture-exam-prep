@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from examprep import store
 from examprep.answer.extract import extract_question
 from examprep.answer.synthesize import synthesize_question
-from examprep.config import course_dir
+from examprep.config import PROMPTS_DIR, course_dir
 from examprep.llm import LLMClient
 from examprep.schemas import Answer, Chunk, Question, QuestionKind, Segment
 
@@ -65,9 +65,11 @@ def _is_current(slug: str, ticket: Ticket, model: str) -> bool:
     if answer.error or answer.model != model or extract.model != model:
         return False
 
+    from examprep.answer.synthesize import PROMPT_VERSION
     from examprep.answer.synthesize import input_hash as answer_hash
 
-    return answer.input_hash == answer_hash(ticket.question, extract, model)
+    template = (PROMPTS_DIR / f"{PROMPT_VERSION}.md").read_text(encoding="utf-8")
+    return answer.input_hash == answer_hash(ticket.question, extract, model, template)
 
 
 def _segments_by_video(slug: str, chunks: dict[str, Chunk]) -> dict[str, list[Segment]]:
