@@ -11,10 +11,10 @@ export function CoursesPage({ index }: { index: DataIndex }) {
           <li key={course.slug}>
             <Link to={`/course/${course.slug}`}>
               <strong>{course.title}</strong>
+              <p className="muted">
+                {course.videos} лекций · {course.answers.length} готовых ответов
+              </p>
             </Link>
-            <p className="muted">
-              лекций: {course.videos} · готовых ответов: {course.answers.length}
-            </p>
           </li>
         ))}
       </ul>
