@@ -20,14 +20,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# ASR отдельно от GPU: на ноутбуке faster-whisper ставится без torch,
-# чтобы прогнать одну лекцию на CPU и проверить формат транскрипта.
-asr = [
-    "faster-whisper>=1.0.3",
-]
+# На GPU-сервере torch и transformers берутся из общего conda-окружения,
+# поэтому базовая установка их не тянет. Extra — для машин, где их нет.
 gpu = [
-    "faster-whisper>=1.0.3",
     "torch>=2.4",
+    "transformers>=4.44",
+    "accelerate>=0.33",
     "sentence-transformers>=3.1",
 ]
 
@@ -68,7 +66,7 @@ module = "examprep.schemas"
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["yt_dlp.*", "faster_whisper.*", "ctranslate2.*", "torch.*", "sentence_transformers.*", "rank_bm25.*", "pymorphy3.*"]
+module = ["yt_dlp.*", "torch.*", "transformers.*", "sentence_transformers.*", "rank_bm25.*", "pymorphy3.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

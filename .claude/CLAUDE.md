@@ -33,6 +33,12 @@
 
 ## Окружение на GPU-сервере
 
+Узел — CUDA 13, поэтому всё, собранное под CUDA 12, там не работает: это и определило выбор ASR-бэкенда.
+Отдельная беда — состояние узла при длинном аптайме: slab разрастается до сотен гигабайт, память
+фрагментируется, и любая крупная аллокация уходит в безуспешную компакцию. Симптом — numpy на 87 млн
+отсчётов считается минутами вместо 0.1 с. Лечится перезагрузкой узла; этим же замером проверять узел
+перед долгим запуском.
+
 Общее conda-окружение `/home/user/conda/envs/kandinsky-cuda13.0` (Python 3.12, torch, transformers)
 **менять нельзя**, хотя каталог и доступен на запись. Поэтому `scripts/setup_server_env.sh` создаёт
 `pipeline/.venv` поверх его интерпретатора с `--system-site-packages`: torch и transformers читаются
@@ -79,7 +85,7 @@ pnpm dev (site читает ../data)
 ├── README.md
 ├── .env.example
 ├── pipeline/
-│   ├── pyproject.toml                 # uv; extras: [asr] (faster-whisper), [gpu] (+ torch, sentence-transformers)
+│   ├── pyproject.toml                 # uv; extra [gpu]: torch, transformers, sentence-transformers
 │   ├── prompts/
 │   │   ├── extract_v1.md
 │   │   └── synthesize_v1.md
@@ -246,8 +252,11 @@ questions:
 
 ## Транскрибация
 
-- `faster-whisper`, модель `large-v3`, `vad_filter=True`, `language="ru"`, `beam_size=5`. `compute_type` выбирается по наличию CUDA: `float16` на GPU, `int8` на CPU (отладка на ноутбуке).
-- `initial_prompt` собирается из `glossary.txt` (имена, термины курса).
+- **Бэкенд — `transformers` поверх torch, не faster-whisper.** CTranslate2 (движок faster-whisper) собирается только под CUDA 12 — включая последнюю версию 4.8.2 от 31.08.2026, — а на кластере CUDA 13, и `libcublas.so.12` там нет. Разворачивать рядом CUDA 12 не стали сознательно.
+- Модель `openai/whisper-large-v3`, `chunk_length_s=30`, `batch_size=16`, `num_beams=5`, `language="ru"`, `return_timestamps=True`. `torch_dtype` по наличию CUDA: `float16` на GPU, `float32` на CPU.
+- Глоссарий уходит в `prompt_ids` через `AutoProcessor.get_prompt_ids`.
+- **VAD больше нет** — он был частью faster-whisper. Отсев галлюцинаций целиком на `clean.py`; если этого мало, подключить silero-vad через torch.hub (он на torch, с CUDA 13 совместим).
+- Транскрибация принимает **только подготовленный WAV**: без CTranslate2 в процессе не осталось декодера сжатого аудио, поэтому `prepare-audio` обязателен.
 - `multi_gpu.py`: очередь видео и N воркеров (N = число GPU, `TRANSCRIBE_GPUS=0,1,…`); каждый воркер — отдельный процесс со своим `CUDA_VISIBLE_DEVICES`.
 - `clean.py`: удаление повторяющихся сегментов и типичных галлюцинаций («Субтитры сделал…», «Продолжение следует…»), нормализация пробелов. Словарь замен — `data/courses/<slug>/replacements.txt`, по строке `неверно -> верно`.
 - `captions.py` — быстрый режим для отладки пайплайна (`--mode captions`), не основной.

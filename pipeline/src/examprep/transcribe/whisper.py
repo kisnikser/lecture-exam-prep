@@ -1,47 +1,86 @@
-"""Step 3: transcribe one audio file with faster-whisper."""
+"""Step 3: transcribe one prepared lecture with Whisper on the torch stack.
+
+CTranslate2 — the engine behind faster-whisper — ships CUDA 12 builds only,
+while this cluster provides CUDA 13. Transcription therefore runs through
+transformers on the torch that the shared environment already has.
+
+Input is always the 16 kHz WAV produced by ``prepare-audio``: without
+CTranslate2 there is no decoder for compressed audio in this process.
+"""
 
 from __future__ import annotations
 
 import wave
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import structlog
 
 from examprep.clean import clean_segments, load_replacements
 from examprep.config import course_dir, get_settings
-from examprep.download import SAMPLE_RATE, transcribe_source
+from examprep.download import SAMPLE_RATE, wav_path
 from examprep.schemas import Segment, Transcript
 from examprep.store import load_course, read_lines
 
 log = structlog.get_logger()
 
-# Whisper reads at most ~224 tokens of initial_prompt; the rest is ignored.
+# Whisper reads at most ~224 tokens of prompt; the rest is ignored.
 GLOSSARY_CHAR_LIMIT = 700
-WAV_SUFFIX = "wav"
+HF_MODEL_PREFIX = "openai/whisper-"
+CHUNK_LENGTH_S = 30
+BATCH_SIZE = 16
+BEAM_SIZE = 5
 
-_MODELS: dict[tuple[str, str, str], object] = {}
+_PIPELINES: dict[tuple[str, str, str], Any] = {}
+
+
+def model_id(name: str) -> str:
+    """`large-v3` is a Hugging Face repository, spelled out."""
+
+    return name if "/" in name else f"{HF_MODEL_PREFIX}{name}"
 
 
 def cuda_device_count() -> int:
-    """GPUs visible to CTranslate2, without importing torch."""
-
     try:
-        import ctranslate2
+        import torch
     except ImportError:
         return 0
     try:
-        return int(ctranslate2.get_cuda_device_count())
+        return int(torch.cuda.device_count())
     except Exception:  # сломанная установка CUDA не должна валить запуск
         return 0
 
 
 def resolve_device(device: str | None = None) -> tuple[str, str]:
-    """Pick the device and the matching compute type (CPU boxes get int8)."""
+    """Pick the device and the matching dtype (CPU boxes stay in float32)."""
 
     if device is None:
         device = "cuda" if cuda_device_count() > 0 else "cpu"
-    return device, "float16" if device == "cuda" else "int8"
+    return device, "float16" if device == "cuda" else "float32"
+
+
+def load_wav(path: Path) -> np.ndarray | None:
+    """Read a prepared 16 kHz mono WAV into the array Whisper wants.
+
+    Returns None when the file is not that layout, so the caller can say what
+    is wrong instead of feeding the model noise.
+    """
+
+    try:
+        with wave.open(str(path), "rb") as handle:
+            if (
+                handle.getnchannels() != 1
+                or handle.getframerate() != SAMPLE_RATE
+                or handle.getsampwidth() != 2
+            ):
+                return None
+            frames = handle.readframes(handle.getnframes())
+    except (OSError, wave.Error) as exc:
+        log.warning("whisper.wav_unreadable", path=str(path), error=str(exc))
+        return None
+
+    return np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32768.0
 
 
 def build_initial_prompt(slug: str) -> str | None:
@@ -61,43 +100,40 @@ def build_initial_prompt(slug: str) -> str | None:
     return f"{load_course(slug).title}. Имена и термины: {listed}."
 
 
-def load_wav(path: Path) -> np.ndarray | None:
-    """Read a prepared 16 kHz mono WAV straight into the array Whisper wants.
+def _pipeline(name: str, device: str, dtype: str) -> Any:
+    key = (name, device, dtype)
+    if key not in _PIPELINES:
+        import torch
+        from transformers import pipeline
 
-    faster-whisper decodes through PyAV, which on a full lecture costs minutes
-    of single-threaded work while the GPU waits. Our own WAV has a known layout,
-    so reading it is a buffer copy. Returns None if the file is not that layout,
-    and the caller falls back to letting faster-whisper open it.
+        log.info("whisper.load", model=name, device=device, dtype=dtype)
+        _PIPELINES[key] = pipeline(
+            "automatic-speech-recognition",
+            model=name,
+            torch_dtype=getattr(torch, dtype),
+            device=device,
+            chunk_length_s=CHUNK_LENGTH_S,
+            batch_size=BATCH_SIZE,
+            return_timestamps=True,
+        )
+    return _PIPELINES[key]
+
+
+def _segments_from(chunks: list[dict[str, Any]], duration: float) -> list[Segment]:
+    """Turn Whisper's chunk timestamps into segments.
+
+    The final chunk of a long recording sometimes comes back with an open end;
+    it is closed with the length of the audio.
     """
 
-    try:
-        with wave.open(str(path), "rb") as handle:
-            if (
-                handle.getnchannels() != 1
-                or handle.getframerate() != SAMPLE_RATE
-                or handle.getsampwidth() != 2
-            ):
-                return None
-            frames = handle.readframes(handle.getnframes())
-    except (OSError, wave.Error) as exc:
-        log.warning("whisper.wav_unreadable", path=str(path), error=str(exc))
-        return None
-
-    return np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32768.0
-
-
-def _model(model_size: str, device: str, compute_type: str) -> object:
-    key = (model_size, device, compute_type)
-    if key not in _MODELS:
-        try:
-            from faster_whisper import WhisperModel
-        except ImportError as exc:  # pragma: no cover - depends on the extra
-            raise RuntimeError(
-                "faster-whisper не установлен: `uv sync --extra asr` (или `--extra gpu`)"
-            ) from exc
-        log.info("whisper.load", model=model_size, device=device, compute_type=compute_type)
-        _MODELS[key] = WhisperModel(model_size, device=device, compute_type=compute_type)
-    return _MODELS[key]
+    segments: list[Segment] = []
+    for chunk in chunks:
+        start, end = chunk.get("timestamp") or (None, None)
+        if start is None:
+            continue
+        text = str(chunk.get("text", ""))
+        segments.append(Segment(start=float(start), end=float(end or duration), text=text))
+    return segments
 
 
 def transcribe_one(
@@ -107,39 +143,52 @@ def transcribe_one(
     device: str | None = None,
 ) -> Transcript:
     settings = get_settings()
-    model_size = model_size or settings.whisper_model
-    device, compute_type = resolve_device(device)
+    name = model_id(model_size or settings.whisper_model)
+    device, dtype = resolve_device(device)
 
-    path = transcribe_source(slug, video_id)
-    if not path.exists():
-        raise FileNotFoundError(f"нет аудио для {video_id}: {path}")
+    path = wav_path(slug, video_id)
+    audio = load_wav(path) if path.exists() else None
+    if audio is None:
+        raise FileNotFoundError(
+            f"нет подготовленного WAV для {video_id}: {path}. Сначала `examprep prepare-audio`."
+        )
 
-    model = _model(model_size, device, compute_type)
-    audio = load_wav(path) if path.suffix == f".{WAV_SUFFIX}" else None
-    raw, info = model.transcribe(  # type: ignore[attr-defined]
-        audio if audio is not None else str(path),
-        language="ru",
-        beam_size=5,
-        vad_filter=True,
-        initial_prompt=build_initial_prompt(slug),
+    generate_kwargs: dict[str, Any] = {
+        "language": "ru",
+        "task": "transcribe",
+        "num_beams": BEAM_SIZE,
+    }
+    prompt = build_initial_prompt(slug)
+    if prompt:
+        generate_kwargs["prompt_ids"] = _prompt_ids(name, prompt, device)
+
+    result = _pipeline(name, device, dtype)(
+        {"array": audio, "sampling_rate": SAMPLE_RATE},
+        generate_kwargs=generate_kwargs,
     )
 
-    segments = [
-        Segment(start=float(s.start), end=float(s.end), text=s.text) for s in raw if s.text.strip()
-    ]
+    duration = len(audio) / SAMPLE_RATE
+    segments = _segments_from(result.get("chunks") or [], duration)
     cleaned = clean_segments(segments, load_replacements(slug))
     log.info(
         "whisper.done",
         video_id=video_id,
         segments=len(cleaned),
         dropped=len(segments) - len(cleaned),
-        duration_s=round(getattr(info, "duration", 0.0)),
+        duration_s=round(duration),
     )
 
     return Transcript(
         video_id=video_id,
         source="whisper",
-        model=model_size,
+        model=name,
         language="ru",
         segments=cleaned,
     )
+
+
+def _prompt_ids(name: str, prompt: str, device: str) -> Any:
+    from transformers import AutoProcessor
+
+    processor = AutoProcessor.from_pretrained(name)
+    return processor.get_prompt_ids(prompt, return_tensors="pt").to(device)

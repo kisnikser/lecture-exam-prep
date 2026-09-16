@@ -19,7 +19,7 @@ uv run examprep download --course hps-skvorchevsky
 ./scripts/sync_audio.sh hps-skvorchevsky
 
 # GPU-сервер: транскрибация, индекс, ответы
-cd pipeline && uv sync --extra gpu
+cd pipeline && uv sync        # torch/transformers берутся из окружения сервера, иначе --extra gpu
 uv run examprep prepare-audio --course hps-skvorchevsky   # m4a → 16 кГц WAV
 uv run examprep transcribe --course hps-skvorchevsky --gpus 0,1,2,3,4,5,6,7
 uv run examprep index      --course hps-skvorchevsky
