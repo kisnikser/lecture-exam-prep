@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import wave
+from pathlib import Path
+
+import numpy as np
 import structlog
 
 from examprep.clean import clean_segments, load_replacements
 from examprep.config import course_dir, get_settings
-from examprep.download import transcribe_source
+from examprep.download import SAMPLE_RATE, transcribe_source
 from examprep.schemas import Segment, Transcript
 from examprep.store import load_course, read_lines
 
@@ -14,6 +18,7 @@ log = structlog.get_logger()
 
 # Whisper reads at most ~224 tokens of initial_prompt; the rest is ignored.
 GLOSSARY_CHAR_LIMIT = 700
+WAV_SUFFIX = "wav"
 
 _MODELS: dict[tuple[str, str, str], object] = {}
 
@@ -56,6 +61,31 @@ def build_initial_prompt(slug: str) -> str | None:
     return f"{load_course(slug).title}. Имена и термины: {listed}."
 
 
+def load_wav(path: Path) -> np.ndarray | None:
+    """Read a prepared 16 kHz mono WAV straight into the array Whisper wants.
+
+    faster-whisper decodes through PyAV, which on a full lecture costs minutes
+    of single-threaded work while the GPU waits. Our own WAV has a known layout,
+    so reading it is a buffer copy. Returns None if the file is not that layout,
+    and the caller falls back to letting faster-whisper open it.
+    """
+
+    try:
+        with wave.open(str(path), "rb") as handle:
+            if (
+                handle.getnchannels() != 1
+                or handle.getframerate() != SAMPLE_RATE
+                or handle.getsampwidth() != 2
+            ):
+                return None
+            frames = handle.readframes(handle.getnframes())
+    except (OSError, wave.Error) as exc:
+        log.warning("whisper.wav_unreadable", path=str(path), error=str(exc))
+        return None
+
+    return np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32768.0
+
+
 def _model(model_size: str, device: str, compute_type: str) -> object:
     key = (model_size, device, compute_type)
     if key not in _MODELS:
@@ -85,8 +115,9 @@ def transcribe_one(
         raise FileNotFoundError(f"нет аудио для {video_id}: {path}")
 
     model = _model(model_size, device, compute_type)
+    audio = load_wav(path) if path.suffix == f".{WAV_SUFFIX}" else None
     raw, info = model.transcribe(  # type: ignore[attr-defined]
-        str(path),
+        audio if audio is not None else str(path),
         language="ru",
         beam_size=5,
         vad_filter=True,
