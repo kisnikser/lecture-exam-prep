@@ -32,6 +32,10 @@ HALLUCINATIONS = [
     r"all rights reserved.*",
     r"thanks for watching.*",
     r"[!?.…\-\s]*",
+    # Subtitle credits: a role followed by an initial and a surname, as in
+    # "Корректор А.Егорова". The initial is what keeps this from matching a
+    # lecture that happens to mention an editor.
+    r".*\b(?:корректор|редактор|расшифровка|перевод)\s+[а-яё]\.\s*[а-яё-]+.*",
 ]
 
 HALLUCINATION_RE = re.compile(rf"^(?:{'|'.join(HALLUCINATIONS)})$", re.IGNORECASE)

@@ -79,3 +79,19 @@ def test_clean_segments_drops_the_echo() -> None:
     cleaned = clean_segments(segments, glossary=GLOSSARY)
 
     assert [s.text for s in cleaned] == ["Сегодня мы начнём с научной революции."]
+
+
+def test_subtitle_credits_with_initials_are_dropped() -> None:
+    segments = [
+        seg(".Семкин Корректор А.Егорова", 0),
+        seg("Редактор М.Иванова", 5),
+        seg("Сегодня говорим о Платоне.", 10),
+    ]
+    assert [s.text for s in clean_segments(segments)] == ["Сегодня говорим о Платоне."]
+
+
+def test_an_editor_without_initials_is_kept() -> None:
+    """A lecture may well discuss editors; only the credits pattern goes."""
+
+    segments = [seg("Редактор журнала настаивал на публикации статьи.", 0)]
+    assert len(clean_segments(segments)) == 1
