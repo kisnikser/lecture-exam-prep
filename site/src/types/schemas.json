@@ -1,0 +1,845 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExamprepData",
+  "type": "object",
+  "properties": {
+    "QuestionSet": {
+      "$ref": "#/$defs/QuestionSet"
+    },
+    "Crosswalk": {
+      "$ref": "#/$defs/Crosswalk"
+    },
+    "Course": {
+      "$ref": "#/$defs/Course"
+    },
+    "Transcript": {
+      "$ref": "#/$defs/Transcript"
+    },
+    "Chunk": {
+      "$ref": "#/$defs/Chunk"
+    },
+    "Extract": {
+      "$ref": "#/$defs/Extract"
+    },
+    "Answer": {
+      "$ref": "#/$defs/Answer"
+    },
+    "DataIndex": {
+      "$ref": "#/$defs/DataIndex"
+    }
+  },
+  "$defs": {
+    "Question": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z]{1,4}\\d{2,3}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "number": {
+          "minimum": 1,
+          "title": "Number",
+          "type": "integer"
+        },
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "number",
+        "text"
+      ],
+      "title": "Question",
+      "type": "object"
+    },
+    "QuestionSet": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "id": {
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "kind": {
+          "enum": [
+            "general",
+            "course"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "questions": {
+          "items": {
+            "$ref": "#/$defs/Question"
+          },
+          "minItems": 1,
+          "title": "Questions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "id",
+        "title",
+        "description",
+        "kind",
+        "questions"
+      ],
+      "title": "QuestionSet",
+      "type": "object"
+    },
+    "CrosswalkPair": {
+      "additionalProperties": false,
+      "properties": {
+        "course": {
+          "pattern": "^[a-z]{1,4}\\d{2,3}$",
+          "title": "Course",
+          "type": "string"
+        },
+        "general": {
+          "items": {
+            "pattern": "^[a-z]{1,4}\\d{2,3}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "General",
+          "type": "array"
+        }
+      },
+      "required": [
+        "course",
+        "general"
+      ],
+      "title": "CrosswalkPair",
+      "type": "object"
+    },
+    "Crosswalk": {
+      "additionalProperties": false,
+      "description": "Hand-made topic mapping between a course set and the general set.\n\nAdvisory only: it drives the \"related questions\" links in the UI and never\ntakes part in retrieval.",
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "verified"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "pairs": {
+          "items": {
+            "$ref": "#/$defs/CrosswalkPair"
+          },
+          "title": "Pairs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "id",
+        "status",
+        "pairs"
+      ],
+      "title": "Crosswalk",
+      "type": "object"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "video_id": {
+          "minLength": 1,
+          "title": "Video Id",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "duration_s": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration S"
+        },
+        "order": {
+          "minimum": 1,
+          "title": "Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "video_id",
+        "url",
+        "title",
+        "duration_s",
+        "order"
+      ],
+      "title": "Source",
+      "type": "object"
+    },
+    "Course": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "slug": {
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "title": "Slug",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "language": {
+          "default": "ru",
+          "title": "Language",
+          "type": "string"
+        },
+        "question_sets": {
+          "items": {
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Question Sets",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "slug",
+        "title",
+        "language",
+        "question_sets",
+        "sources"
+      ],
+      "title": "Course",
+      "type": "object"
+    },
+    "Segment": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "minimum": 0.0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "minimum": 0.0,
+          "title": "End",
+          "type": "number"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "text"
+      ],
+      "title": "Segment",
+      "type": "object"
+    },
+    "Transcript": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "video_id": {
+          "minLength": 1,
+          "title": "Video Id",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "whisper",
+            "captions"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "language": {
+          "default": "ru",
+          "title": "Language",
+          "type": "string"
+        },
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/Segment"
+          },
+          "title": "Segments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "video_id",
+        "source",
+        "model",
+        "language",
+        "segments"
+      ],
+      "title": "Transcript",
+      "type": "object"
+    },
+    "Chunk": {
+      "additionalProperties": false,
+      "properties": {
+        "chunk_id": {
+          "pattern": "^[\\w-]+:\\d{4,}$",
+          "title": "Chunk Id",
+          "type": "string"
+        },
+        "source_type": {
+          "const": "video",
+          "default": "video",
+          "title": "Source Type",
+          "type": "string"
+        },
+        "video_id": {
+          "minLength": 1,
+          "title": "Video Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0.0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "minimum": 0.0,
+          "title": "End",
+          "type": "number"
+        },
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "chunk_id",
+        "source_type",
+        "video_id",
+        "start",
+        "end",
+        "text"
+      ],
+      "title": "Chunk",
+      "type": "object"
+    },
+    "ExtractReading": {
+      "additionalProperties": false,
+      "description": "A work the lecturer named out loud, with the fragment that mentions it.",
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "chunk_id": {
+          "pattern": "^[\\w-]+:\\d{4,}$",
+          "title": "Chunk Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "chunk_id"
+      ],
+      "title": "ExtractReading",
+      "type": "object"
+    },
+    "RelevantChunk": {
+      "additionalProperties": false,
+      "properties": {
+        "chunk_id": {
+          "pattern": "^[\\w-]+:\\d{4,}$",
+          "title": "Chunk Id",
+          "type": "string"
+        },
+        "relevance": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Relevance",
+          "type": "number"
+        },
+        "points": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Points",
+          "type": "array"
+        },
+        "quote": {
+          "minLength": 1,
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "chunk_id",
+        "relevance",
+        "points",
+        "quote"
+      ],
+      "title": "RelevantChunk",
+      "type": "object"
+    },
+    "Extract": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "question_id": {
+          "pattern": "^[a-z]{1,4}\\d{2,3}$",
+          "title": "Question Id",
+          "type": "string"
+        },
+        "candidates": {
+          "minimum": 0,
+          "title": "Candidates",
+          "type": "integer"
+        },
+        "relevant": {
+          "items": {
+            "$ref": "#/$defs/RelevantChunk"
+          },
+          "title": "Relevant",
+          "type": "array"
+        },
+        "readings": {
+          "items": {
+            "$ref": "#/$defs/ExtractReading"
+          },
+          "title": "Readings",
+          "type": "array"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_version": {
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "input_hash": {
+          "title": "Input Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "question_id",
+        "candidates",
+        "relevant",
+        "readings",
+        "model",
+        "prompt_version",
+        "input_hash"
+      ],
+      "title": "Extract",
+      "type": "object"
+    },
+    "AnswerReading": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "video_id": {
+          "minLength": 1,
+          "title": "Video Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0.0,
+          "title": "Start",
+          "type": "number"
+        }
+      },
+      "required": [
+        "text",
+        "video_id",
+        "start"
+      ],
+      "title": "AnswerReading",
+      "type": "object"
+    },
+    "Citation": {
+      "additionalProperties": false,
+      "properties": {
+        "n": {
+          "minimum": 1,
+          "title": "N",
+          "type": "integer"
+        },
+        "chunk_id": {
+          "pattern": "^[\\w-]+:\\d{4,}$",
+          "title": "Chunk Id",
+          "type": "string"
+        },
+        "video_id": {
+          "minLength": 1,
+          "title": "Video Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0.0,
+          "title": "Start",
+          "type": "number"
+        },
+        "quote": {
+          "minLength": 1,
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "n",
+        "chunk_id",
+        "video_id",
+        "start",
+        "quote"
+      ],
+      "title": "Citation",
+      "type": "object"
+    },
+    "Answer": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "question_id": {
+          "pattern": "^[a-z]{1,4}\\d{2,3}$",
+          "title": "Question Id",
+          "type": "string"
+        },
+        "question_set": {
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "title": "Question Set",
+          "type": "string"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "answer_md": {
+          "title": "Answer Md",
+          "type": "string"
+        },
+        "outside_lectures_md": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outside Lectures Md"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "title": "Citations",
+          "type": "array"
+        },
+        "readings": {
+          "items": {
+            "$ref": "#/$defs/AnswerReading"
+          },
+          "title": "Readings",
+          "type": "array"
+        },
+        "coverage": {
+          "enum": [
+            "full",
+            "partial",
+            "not_found"
+          ],
+          "title": "Coverage",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_version": {
+          "title": "Prompt Version",
+          "type": "string"
+        },
+        "input_hash": {
+          "title": "Input Hash",
+          "type": "string"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "title": "Generated At",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "schema_version",
+        "question_id",
+        "question_set",
+        "question",
+        "answer_md",
+        "outside_lectures_md",
+        "citations",
+        "readings",
+        "coverage",
+        "model",
+        "prompt_version",
+        "input_hash",
+        "generated_at",
+        "error"
+      ],
+      "title": "Answer",
+      "type": "object"
+    },
+    "IndexAnswer": {
+      "additionalProperties": false,
+      "description": "What the pipeline has already produced for one question of one course.",
+      "properties": {
+        "question_id": {
+          "pattern": "^[a-z]{1,4}\\d{2,3}$",
+          "title": "Question Id",
+          "type": "string"
+        },
+        "question_set": {
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "title": "Question Set",
+          "type": "string"
+        },
+        "coverage": {
+          "enum": [
+            "full",
+            "partial",
+            "not_found"
+          ],
+          "title": "Coverage",
+          "type": "string"
+        },
+        "citations": {
+          "minimum": 0,
+          "title": "Citations",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "question_id",
+        "question_set",
+        "coverage",
+        "citations"
+      ],
+      "title": "IndexAnswer",
+      "type": "object"
+    },
+    "IndexCourse": {
+      "additionalProperties": false,
+      "properties": {
+        "slug": {
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "title": "Slug",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "language": {
+          "title": "Language",
+          "type": "string"
+        },
+        "question_sets": {
+          "items": {
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "type": "string"
+          },
+          "title": "Question Sets",
+          "type": "array"
+        },
+        "videos": {
+          "minimum": 0,
+          "title": "Videos",
+          "type": "integer"
+        },
+        "answers": {
+          "items": {
+            "$ref": "#/$defs/IndexAnswer"
+          },
+          "title": "Answers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "slug",
+        "title",
+        "language",
+        "question_sets",
+        "videos",
+        "answers"
+      ],
+      "title": "IndexCourse",
+      "type": "object"
+    },
+    "DataIndex": {
+      "additionalProperties": false,
+      "description": "``data/index.json`` — the only file the site has to fetch first.\n\nQuestion sets are inlined: all of them together are a few dozen kilobytes,\nand the browser then needs neither a YAML parser nor a second round trip.",
+      "properties": {
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "courses": {
+          "items": {
+            "$ref": "#/$defs/IndexCourse"
+          },
+          "title": "Courses",
+          "type": "array"
+        },
+        "question_sets": {
+          "items": {
+            "$ref": "#/$defs/QuestionSet"
+          },
+          "title": "Question Sets",
+          "type": "array"
+        },
+        "crosswalks": {
+          "items": {
+            "$ref": "#/$defs/Crosswalk"
+          },
+          "title": "Crosswalks",
+          "type": "array"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "title": "Generated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema_version",
+        "courses",
+        "question_sets",
+        "crosswalks",
+        "generated_at"
+      ],
+      "title": "DataIndex",
+      "type": "object"
+    }
+  }
+}
