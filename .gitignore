@@ -165,7 +165,7 @@ venv.bak/
 .ropeproject
 
 # mkdocs documentation
-/site
+# (шаблонное правило /site снято: site/ — это фронтенд проекта, а не вывод mkdocs)
 
 # mypy
 .mypy_cache/
@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- examprep ---
+.env
+data/courses/*/audio/
+*.npy
+pipeline/.logs/
+node_modules/
+site/dist/
