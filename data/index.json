@@ -126,22 +126,172 @@
           "citations": 0
         },
         {
-          "question_id": "s12",
+          "question_id": "g20",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 19
+        },
+        {
+          "question_id": "g21",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 19
+        },
+        {
+          "question_id": "g22",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 16
+        },
+        {
+          "question_id": "g23",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 21
+        },
+        {
+          "question_id": "g24",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 13
+        },
+        {
+          "question_id": "g25",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 3
+        },
+        {
+          "question_id": "g26",
+          "question_set": "mipt-hps-general-2025-26",
+          "coverage": "partial",
+          "citations": 1
+        },
+        {
+          "question_id": "s01",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 14
+        },
+        {
+          "question_id": "s02",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 15
+        },
+        {
+          "question_id": "s03",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 24
+        },
+        {
+          "question_id": "s04",
           "question_set": "skvorchevsky-2025-26",
           "coverage": "full",
           "citations": 21
         },
         {
+          "question_id": "s05",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 16
+        },
+        {
+          "question_id": "s06",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 20
+        },
+        {
+          "question_id": "s07",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 15
+        },
+        {
+          "question_id": "s08",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 20
+        },
+        {
+          "question_id": "s09",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 15
+        },
+        {
+          "question_id": "s10",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 19
+        },
+        {
+          "question_id": "s11",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 10
+        },
+        {
+          "question_id": "s12",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 1
+        },
+        {
           "question_id": "s13",
           "question_set": "skvorchevsky-2025-26",
           "coverage": "partial",
-          "citations": 6
+          "citations": 4
+        },
+        {
+          "question_id": "s14",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "partial",
+          "citations": 2
+        },
+        {
+          "question_id": "s15",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "not_found",
+          "citations": 0
+        },
+        {
+          "question_id": "s16",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 12
+        },
+        {
+          "question_id": "s17",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "partial",
+          "citations": 10
         },
         {
           "question_id": "s18",
           "question_set": "skvorchevsky-2025-26",
           "coverage": "not_found",
           "citations": 0
+        },
+        {
+          "question_id": "s19",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "not_found",
+          "citations": 0
+        },
+        {
+          "question_id": "s20",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "full",
+          "citations": 9
+        },
+        {
+          "question_id": "s21",
+          "question_set": "skvorchevsky-2025-26",
+          "coverage": "partial",
+          "citations": 10
         }
       ]
     }
@@ -518,5 +668,5 @@
       ]
     }
   ],
-  "generated_at": "2026-09-16T15:36:15.963080Z"
+  "generated_at": "2026-09-16T16:08:59.862603Z"
 }

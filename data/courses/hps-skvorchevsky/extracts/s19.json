@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "question_id": "s18",
+  "question_id": "s19",
   "candidates": 40,
   "relevant": [],
   "readings": [],
   "model": "/home/jovyan/shares/SR008.fs2/me/models/Qwen3.8-Flash-Next-FP8",
   "prompt_version": "extract_v1",
-  "input_hash": "f1e1df7bdd0ee654a18b306e39b20943cdd9389d936921596ddf3b909e1407ac"
+  "input_hash": "ad1aea8203488a9e2c97d19a54bd6b52c7aeb4bae6ae0519e034500d5b3861ca"
 }

@@ -235,3 +235,96 @@ class TestPromptEntersTheCacheKey:
         second = input_hash(self._question(), extract, "m", "промпт, но поправленный")
 
         assert first != second
+
+
+class TestVerifiedCoverage:
+    """Coverage has to survive the check, not just be claimed."""
+
+    def test_nothing_verifiable_means_not_found(self) -> None:
+        from examprep.answer.synthesize import verified_coverage
+
+        assert verified_coverage("partial", 0, "g09") == "not_found"
+        assert verified_coverage("full", 0, "g09") == "not_found"
+
+    def test_full_needs_more_than_one_surviving_quote(self) -> None:
+        """The run that prompted this: s12 claimed full on a single citation."""
+
+        from examprep.answer.synthesize import verified_coverage
+
+        assert verified_coverage("full", 1, "s12") == "partial"
+        assert verified_coverage("full", 2, "s12") == "partial"
+
+    def test_a_well_supported_full_stands(self) -> None:
+        from examprep.answer.synthesize import verified_coverage
+
+        assert verified_coverage("full", 3, "s09") == "full"
+        assert verified_coverage("full", 21, "s09") == "full"
+
+    def test_partial_with_support_stands(self) -> None:
+        from examprep.answer.synthesize import verified_coverage
+
+        assert verified_coverage("partial", 1, "g10") == "partial"
+
+    def test_not_found_stays_not_found(self) -> None:
+        from examprep.answer.synthesize import verified_coverage
+
+        assert verified_coverage("not_found", 0, "s18") == "not_found"
+
+
+class TestMaterialLimit:
+    def test_only_the_most_relevant_fragments_are_sent(self) -> None:
+        from examprep.answer.synthesize import MATERIAL_LIMIT, selected
+        from examprep.schemas import Extract, RelevantChunk
+
+        extract = Extract(
+            question_id="s12",
+            candidates=40,
+            relevant=[
+                RelevantChunk(
+                    chunk_id=f"abc123:{i:04d}",
+                    relevance=1.0 - i / 100,
+                    points=["тезис"],
+                    quote="цитата из лекции",
+                )
+                for i in range(37)
+            ],
+            model="m",
+            prompt_version="extract_v1",
+            input_hash="h",
+        )
+
+        assert len(selected(extract)) == MATERIAL_LIMIT
+        assert selected(extract)[0].chunk_id == "abc123:0000"
+
+    def test_the_limit_enters_the_answer_hash(self) -> None:
+        """Passing fewer fragments must invalidate stored answers."""
+
+        from examprep.answer import synthesize
+        from examprep.schemas import Extract, Question, RelevantChunk
+
+        extract = Extract(
+            question_id="s12",
+            candidates=40,
+            relevant=[
+                RelevantChunk(
+                    chunk_id=f"abc123:{i:04d}",
+                    relevance=1.0 - i / 100,
+                    points=["тезис"],
+                    quote="цитата",
+                )
+                for i in range(30)
+            ],
+            model="m",
+            prompt_version="extract_v1",
+            input_hash="h",
+        )
+        question = Question(id="s12", number=12, text="Неопозитивизм.")
+
+        before = synthesize.input_hash(question, extract, "m", "промпт")
+        synthesize.MATERIAL_LIMIT = 5
+        try:
+            after = synthesize.input_hash(question, extract, "m", "промпт")
+        finally:
+            synthesize.MATERIAL_LIMIT = 15
+
+        assert before != after

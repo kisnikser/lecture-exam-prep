@@ -22,6 +22,7 @@ from examprep.schemas import (
     Extract,
     Question,
     QuestionKind,
+    RelevantChunk,
     Segment,
 )
 from examprep.store import save_answer
@@ -30,6 +31,16 @@ log = structlog.get_logger()
 
 PROMPT_VERSION = "synthesize_v1"
 MAX_QUOTE_LEN = 300
+
+# Сколько фрагментов уходит в синтез. Замер на полном прогоне: билеты с 27-37
+# релевантными фрагментами теряли на проверке от половины до почти всех цитат,
+# тогда как билеты с дюжиной — единицы. Модель, которой дали сорок тысяч
+# символов, перестаёт копировать дословно и начинает пересказывать по памяти.
+MATERIAL_LIMIT = 15
+
+# «Лекции покрывают вопрос целиком» — сильное утверждение, и на одной
+# подтверждённой цитате оно не держится.
+MIN_CITATIONS_FOR_FULL = 3
 
 KIND_NOTE = {
     "general": "общий список МФТИ — тема шире того, что читалось в курсе",
@@ -69,12 +80,16 @@ class SynthesisResponse(BaseModel):
 
 
 def input_hash(question: Question, extract: Extract, model: str, template: str = "") -> str:
-    """The prompt enters by its text, so editing it invalidates stored answers."""
+    """Identity of the answer: everything that was actually sent to the model.
+
+    Only the selected fragments enter the hash, not every relevant one, so
+    changing how many of them are passed invalidates stored answers.
+    """
 
     digest = hashlib.sha256()
     digest.update(question.text.encode("utf-8"))
     digest.update(extract.input_hash.encode("utf-8"))
-    for item in extract.relevant:
+    for item in selected(extract):
         digest.update(item.chunk_id.encode("utf-8"))
         digest.update(" ".join(item.points).encode("utf-8"))
     digest.update(model.encode("utf-8"))
@@ -82,11 +97,17 @@ def input_hash(question: Question, extract: Extract, model: str, template: str =
     return digest.hexdigest()
 
 
-def format_material(extract: Extract, chunks: dict[str, Chunk]) -> str:
+def selected(extract: Extract) -> list[RelevantChunk]:
+    """The fragments synthesis actually gets, most relevant first."""
+
+    return extract.relevant[:MATERIAL_LIMIT]
+
+
+def format_material(items: list[RelevantChunk], chunks: dict[str, Chunk]) -> str:
     """The kept fragments as the prompt sees them."""
 
     blocks = []
-    for item in extract.relevant:
+    for item in items:
         chunk = chunks.get(item.chunk_id)
         if chunk is None:
             continue
@@ -177,6 +198,25 @@ def renumber(answer_md: str, response: SynthesisResponse, dropped: list[int]) ->
     return re.sub(r"\[(\d+)\]", replace, answer_md)
 
 
+def verified_coverage(claimed: Coverage, citations: int, question_id: str) -> Coverage:
+    """Temper the model's own verdict with how much of it survived checking.
+
+    The model judges coverage before its quotes are verified, so an answer can
+    claim the lectures while nothing in it is traceable to them. What the
+    student needs to know is whether the answer can be leaned on, and that is
+    decided by the citations that held up.
+    """
+
+    if citations == 0:
+        if claimed != "not_found":
+            log.warning("synthesize.no_citations", question_id=question_id, claimed=claimed)
+        return "not_found"
+    if claimed == "full" and citations < MIN_CITATIONS_FOR_FULL:
+        log.warning("synthesize.thin_full", question_id=question_id, citations=citations)
+        return "partial"
+    return claimed
+
+
 async def synthesize_question(
     client: LLMClient,
     slug: str,
@@ -194,7 +234,8 @@ async def synthesize_question(
         question=question.text,
         kind_note=KIND_NOTE[kind],
         kind_guidance=KIND_GUIDANCE[kind],
-        material=format_material(extract, chunks) or "(лекции ничего не дали по этому вопросу)",
+        material=format_material(selected(extract), chunks)
+        or "(лекции ничего не дали по этому вопросу)",
     )
 
     response = await client.complete_model(
@@ -207,11 +248,7 @@ async def synthesize_question(
     citations, dropped = build_citations(response, chunks, segments_by_video)
     answer_md = renumber(response.answer_md, response, dropped)
 
-    coverage: Coverage = response.coverage
-    if not citations and coverage != "not_found":
-        # Nothing verifiable survived, so the answer cannot claim the lectures.
-        log.warning("synthesize.no_citations", question_id=question.id)
-        coverage = "partial"
+    coverage = verified_coverage(response.coverage, len(citations), question.id)
 
     readings = [
         AnswerReading(
