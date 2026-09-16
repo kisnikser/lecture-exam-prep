@@ -13,7 +13,7 @@ from examprep.answer.extract import extract_question
 from examprep.answer.synthesize import synthesize_question
 from examprep.config import course_dir
 from examprep.llm import LLMClient
-from examprep.schemas import Answer, Chunk, Question, QuestionKind
+from examprep.schemas import Answer, Chunk, Question, QuestionKind, Segment
 
 log = structlog.get_logger()
 
@@ -70,11 +70,24 @@ def _is_current(slug: str, ticket: Ticket, model: str) -> bool:
     return answer.input_hash == answer_hash(ticket.question, extract, model)
 
 
+def _segments_by_video(slug: str, chunks: dict[str, Chunk]) -> dict[str, list[Segment]]:
+    """Transcript segments per video, so a citation can name the sentence."""
+
+    segments: dict[str, list[Segment]] = {}
+    for video_id in {chunk.video_id for chunk in chunks.values()}:
+        try:
+            segments[video_id] = store.load_transcript(slug, video_id).segments
+        except (FileNotFoundError, ValidationError, ValueError):
+            log.warning("answer.no_transcript", video_id=video_id)
+    return segments
+
+
 async def _one(
     client: LLMClient,
     slug: str,
     ticket: Ticket,
     chunks: dict[str, Chunk],
+    segments_by_video: dict[str, list[Segment]],
     force: bool,
     top_k: int | None,
 ) -> Answer | None:
@@ -91,6 +104,7 @@ async def _one(
         ticket.question_set,
         extract,
         chunks,
+        segments_by_video,
     )
 
 
@@ -116,12 +130,13 @@ async def answer_course(
         raise ValueError(f"нет chunks.jsonl для курса {slug}; сначала `examprep index`")
 
     chunks = {chunk.chunk_id: chunk for chunk in store.iter_chunks(slug)}
+    segments_by_video = _segments_by_video(slug, chunks)
     client = LLMClient()
 
     answers: list[Answer] = []
     for ticket in tickets:
         try:
-            answer = await _one(client, slug, ticket, chunks, force, top_k)
+            answer = await _one(client, slug, ticket, chunks, segments_by_video, force, top_k)
         except Exception:
             # One broken ticket must not cost the other forty-six.
             log.exception("answer.failed", question_id=ticket.question.id)

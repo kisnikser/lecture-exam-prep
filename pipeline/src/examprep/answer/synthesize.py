@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 
 import structlog
 from pydantic import BaseModel, Field
 
-from examprep.answer.verify import quote_matches
+from examprep.answer.verify import quote_matches, quote_start
 from examprep.config import PROMPTS_DIR, get_settings
 from examprep.llm import LLMClient, render_prompt
 from examprep.schemas import (
@@ -21,6 +22,7 @@ from examprep.schemas import (
     Extract,
     Question,
     QuestionKind,
+    Segment,
 )
 from examprep.store import save_answer
 
@@ -95,9 +97,16 @@ def format_material(extract: Extract, chunks: dict[str, Chunk]) -> str:
     return "\n\n".join(blocks)
 
 
+def segments_in(chunk: Chunk, segments: Sequence[Segment]) -> list[Segment]:
+    """The transcript segments the chunk was built from."""
+
+    return [s for s in segments if s.start < chunk.end and s.end > chunk.start]
+
+
 def build_citations(
     response: SynthesisResponse,
     chunks: dict[str, Chunk],
+    segments_by_video: Mapping[str, Sequence[Segment]] | None = None,
 ) -> tuple[list[Citation], list[int]]:
     """Turn the model's references into citations, reporting what was dropped.
 
@@ -121,12 +130,18 @@ def build_citations(
             dropped.append(position)
             continue
 
+        # Point at the sentence, not at the top of a ninety-second window.
+        start = chunk.start
+        if segments_by_video:
+            segments = segments_in(chunk, segments_by_video.get(chunk.video_id, []))
+            start = quote_start(segments, quote, fallback=chunk.start)
+
         citations.append(
             Citation(
                 n=len(citations) + 1,
                 chunk_id=chunk.chunk_id,
                 video_id=chunk.video_id,
-                start=chunk.start,
+                start=start,
                 quote=quote,
             )
         )
@@ -168,6 +183,7 @@ async def synthesize_question(
     question_set: str,
     extract: Extract,
     chunks: dict[str, Chunk],
+    segments_by_video: Mapping[str, Sequence[Segment]] | None = None,
 ) -> Answer:
     template = (PROMPTS_DIR / f"{PROMPT_VERSION}.md").read_text(encoding="utf-8")
     prompt = render_prompt(
@@ -186,7 +202,7 @@ async def synthesize_question(
         max_tokens=8192,
     )
 
-    citations, dropped = build_citations(response, chunks)
+    citations, dropped = build_citations(response, chunks, segments_by_video)
     answer_md = renumber(response.answer_md, response, dropped)
 
     coverage: Coverage = response.coverage

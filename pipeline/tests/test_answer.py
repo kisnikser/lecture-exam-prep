@@ -1,8 +1,8 @@
 from examprep.answer.extract import timecode
 from examprep.answer.synthesize import CitationOut, SynthesisResponse, build_citations, renumber
-from examprep.answer.verify import quote_matches
+from examprep.answer.verify import quote_matches, quote_start
 from examprep.llm import extract_json, render_prompt, strip_thinking
-from examprep.schemas import Chunk
+from examprep.schemas import Chunk, Segment
 
 FRAGMENT = (
     "Поппер считает, что критерием научности является не подтверждаемость, "
@@ -128,3 +128,75 @@ class TestLLMHelpers:
 def test_timecode() -> None:
     assert timecode(610.0) == "10:10"
     assert timecode(59.9) == "00:59"
+
+
+SEGMENTS = [
+    Segment(start=600.0, end=608.0, text="Так вот, о чём мы говорили в прошлый раз."),
+    Segment(start=608.0, end=618.0, text="Поппер считает, что критерием научности является"),
+    Segment(
+        start=618.0,
+        end=628.0,
+        text="не подтверждаемость, а принципиальная возможность опровержения.",
+    ),
+    Segment(start=628.0, end=640.0, text="Это и называется фальсифицируемостью."),
+]
+
+
+class TestQuoteStart:
+    def test_points_at_the_segment_where_the_quote_begins(self) -> None:
+        assert quote_start(SEGMENTS, "Поппер считает, что критерием научности", 600.0) == 608.0
+
+    def test_quote_spanning_two_segments(self) -> None:
+        """The lecturer's sentence rarely fits one segment."""
+
+        quote = "критерием научности является не подтверждаемость"
+        assert quote_start(SEGMENTS, quote, 600.0) == 608.0
+
+    def test_falls_back_when_the_quote_is_not_there(self) -> None:
+        assert quote_start(SEGMENTS, "Кун вводит понятие парадигмы", 600.0) == 600.0
+
+    def test_falls_back_on_a_quote_too_short_to_place(self) -> None:
+        assert quote_start(SEGMENTS, "наука", 600.0) == 600.0
+
+
+class TestCitationTimecode:
+    def test_citation_points_at_the_sentence_not_the_window(self) -> None:
+        window = Chunk(
+            chunk_id="abc123:0007",
+            video_id="abc123",
+            start=600.0,
+            end=690.0,
+            text=" ".join(s.text for s in SEGMENTS),
+        )
+        response = SynthesisResponse(
+            answer_md="Тезис [1].",
+            coverage="full",
+            citations=[
+                CitationOut(chunk_id="abc123:0007", quote="Поппер считает, что критерием научности")
+            ],
+        )
+        citations, dropped = build_citations(
+            response, {"abc123:0007": window}, {"abc123": SEGMENTS}
+        )
+
+        assert dropped == []
+        assert citations[0].start == 608.0
+
+    def test_without_segments_it_keeps_the_window_start(self) -> None:
+        window = Chunk(
+            chunk_id="abc123:0007",
+            video_id="abc123",
+            start=600.0,
+            end=690.0,
+            text=" ".join(s.text for s in SEGMENTS),
+        )
+        response = SynthesisResponse(
+            answer_md="Тезис [1].",
+            coverage="full",
+            citations=[
+                CitationOut(chunk_id="abc123:0007", quote="Поппер считает, что критерием научности")
+            ],
+        )
+        citations, _ = build_citations(response, {"abc123:0007": window})
+
+        assert citations[0].start == 600.0
